@@ -11,5 +11,5 @@ struct route {
 	node next_hop;
 	unsigned int distance;
 	bool pathentries[MAX_NODES];
-}
+};
 #endif
