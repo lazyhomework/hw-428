@@ -5,7 +5,7 @@
 
 #define MAX_NODES 10
 
-typedef unsigned int node;
+typedef size_t node;
 
 struct route {
 	node next_hop;

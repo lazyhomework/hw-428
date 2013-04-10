@@ -14,4 +14,6 @@ struct host {
 
 struct host hosts[10];
 size_t nhosts;
+
+void printhost(size_t n);
 #endif

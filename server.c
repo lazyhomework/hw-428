@@ -19,13 +19,13 @@ void setup(int argc, char* argv[]) {
 
 	int required = 0x0;
 
-	while ((ch = getopt(argc, argv, "hn:") != -1)) {
+	while (((ch = getopt(argc, argv, "hn:")) != -1)) {
 		switch (ch) {
 			case 'h':
 				usage(0);
-				required |= 0x1;
 				break;
 			case 'n':
+				required |= 0x1;
 				whoami = atoi(optarg);
 				break;
 			case '?':
@@ -41,5 +41,6 @@ void setup(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
 	setup(argc, argv);
+	printhost(whoami);
 	return 0;
 }
