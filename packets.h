@@ -3,15 +3,22 @@
 
 #include <string.h>
 
+enum packet_type {
+	PACKET_HELLO
+};
+
 struct packet {
-	int magick;
+	enum packet_type magick;
 	size_t prevhop;
+	size_t datasize;
 	void* data;
 };
 
-struct hello_packet {
+struct hello_packet_data {
 	char wtf_do_i_need_here;
 
 };
+
+
 
 #endif
