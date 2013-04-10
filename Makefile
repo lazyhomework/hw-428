@@ -7,9 +7,9 @@ server:	server.o config.o packets.o routing.o
 
 config.o: config.h
 
-packets.o: packets.h
+packets.o: packets.h config.h
 
-routing.o: routing.h
+routing.o: routing.h config.h
 
 clean:
 	rm -vf *.o server
