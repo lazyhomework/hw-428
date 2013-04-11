@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <getopt.h>
 
 #include "config.h"
 #include "packets.h"
@@ -80,7 +81,7 @@ int getsocket(port p) {
 	servaddr.sin_port = htons(p);
 
 	err = bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
-	if (err == -1) {
+	if (err == -	1) {
 		die("bind", errno);
 	}
 	return listenfd;
@@ -90,12 +91,14 @@ pthread_rwlock_t routing_table_lock;
 
 void init_routing_table() {
 	/* Not really required to lock, but for sanity */
-	pthread_rwlock_rdlock(&routing_table_lock);
-
+	pthread_rwlock_wrlock(&routing_table_lock);
+	
 	for (size_t i = 0; i < MAX_HOSTS; ++i) {
 		routing_table[i].next_hop = MAX_HOSTS;
 		routing_table[i].distance = INFINTITY;
-		memcpy(&routing_table[i].pathentries, false , MAX_HOSTS);
+		routing_table[i].ttl = MAX_TTL;
+		memset(routing_table[i].pathentries, false , MAX_HOSTS);
+		routing_table[i].pathentries[0] = TERMINATOR;
 	}
 
 	for (size_t i = 0; hosts[whoami].neighbors[i] != TERMINATOR; ++i) {
@@ -103,19 +106,69 @@ void init_routing_table() {
 		routing_table[hosts[whoami].neighbors[i]].next_hop = hosts[whoami].neighbors[i];
 		routing_table[hosts[whoami].neighbors[i]].distance = 1;
 	}
+
 	pthread_rwlock_unlock(&routing_table_lock);
 }
 
 
 void* routingthread(void* data) {
 	int sock = getsocket(hosts[whoami].routingport);
+	int err;
+	socklen_t addrsize;
+
+	struct sockaddr_in addr;
+	struct packet header;
+	struct route * path;
+	
+	void * rcvbuf =  malloc(sizeof(unsigned char) * MAX_PACKET);
+	
+	//recv size is potentially bad.
+	err = recvfrom(sock, rcvbuf, PACK_HEAD_SIZE, 0,(struct sockaddr *)&addr, &addrsize);
+	if(err < 0){
+		die("Receive from", errno);
+	}
+	
+	//handle short reads?
+	memcpy(&header, rcvbuf, PACK_HEAD_SIZE);
+	
+	if(header.magick == PACKET_HELLO){
+		//not needed with dist vector routing
+	}else if(header.magick == PACKET_ROUTING){
+		//short read possible
+		err = recvfrom(sock, rcvbuf, header.datasize, 0, (struct sockaddr *) &addr, &addrsize);
+		if(err < 0){
+			die("Receive from", errno);
+		}
+				
+		pthread_rwlock_wrlock(&routing_table_lock);
+		
+		path = (struct route *) rcvbuf;		
+		for(size_t i = 0; i < MAX_HOSTS; ++i){
+			
+			//we're not part of path AND ( Distance is shorter OR table came from next hop on path )
+			if( !path[i].pathentries[whoami] 
+					&& 	(path[i].distance < routing_table[i].distance
+					|| routing_table[i].next_hop == header.prevhop ) ){
+				
+				routing_table[i].distance = path[i].distance + 1;
+				routing_table[i].next_hop = header.prevhop;
+				routing_table[i].ttl = MAX_TTL;
+				memcpy(routing_table[i].pathentries, path[i].pathentries, MAX_HOSTS);
+				routing_table[i].pathentries[whoami] = true;
+			}
+		}
+		
+		pthread_rwlock_unlock(&routing_table_lock);
+	}
+	
+	free(rcvbuf);	
 	return NULL;
 }
 
 
 int main(int argc, char* argv[]) {
 	int err;
-
+	
 	setup(argc, argv);
 	printhost(whoami);
 	init_routing_table();

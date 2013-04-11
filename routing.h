@@ -7,12 +7,13 @@
 #include "config.h"
 
 #define INFINTITY UINT_MAX
-
+#define MAX_TTL 120		//in seconds?
 typedef size_t node;
 
 struct route {
 	node next_hop;
 	unsigned int distance;
+	unsigned int ttl;
 	bool pathentries[MAX_HOSTS];
 };
 
