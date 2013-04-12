@@ -128,7 +128,7 @@ static void* timerthread(void* data){
 		//update the ttl on all routes		
 		for (size_t i = 0; i < MAX_HOSTS; ++i) {
 			if((routing_table[i].ttl -= interval) <= 0){
-				routing_table[i].next_hop = TERMINATOR;
+				routing_table[i].next_hop = whoami;
 				routing_table[i].distance = INFINTITY;
 				routing_table[i].ttl = MAX_ROUTE_TTL;
 				//Leave the host info.
@@ -142,35 +142,32 @@ static void* timerthread(void* data){
 		
 		pthread_rwlock_unlock(&routing_table_lock);
 		
-		//Clean the data before sending to next router.
-		for(size_t i = 0; i < MAX_HOSTS; ++i){
-			tablecpy[i].next_hop = 0;
-			tablecpy[i].ttl = 0;
-		}
-		
 		//Go through list of neighbors, send the table to them.
-		for (size_t i = 0; hosts[whoami].neighbors[i] != TERMINATOR; ++i) {
+		for (size_t i = 0; i < MAX_HOSTS; ++i) {
 				
-				neighbor = hosts[whoami].neighbors[i];
+				if(tablecpy[i].distance == 1){
 				
-				targetaddr.sin_family = tablecpy[neighbor].host->h_addrtype;
-				targetaddr.sin_port = htons(hosts[neighbor].routingport);
+					neighbor = i;
 				
-				memcpy(&targetaddr.sin_addr.s_addr, tablecpy[neighbor].host->h_addr_list[0]
-					, tablecpy[neighbor].host->h_length);
+					targetaddr.sin_family = tablecpy[neighbor].host->h_addrtype;
+					targetaddr.sin_port = htons(hosts[neighbor].routingport);
 				
-				header.dest = neighbor;
-				memcpy(buffer,&header,sizeof(struct packet_header));
+					memcpy(&targetaddr.sin_addr.s_addr, tablecpy[neighbor].host->h_addr_list[0]
+						, tablecpy[neighbor].host->h_length);
+				
+					header.dest = neighbor;
+					memcpy(buffer,&header,sizeof(struct packet_header));
 
 #ifdef TIMING_DEBUG
-				printf("Sending packet: ");
-				print_pack_h((struct packet_header*)buffer);
-				print_rt_ptr(tablecpy);
+					printf("Sending packet: ");
+					print_pack_h((struct packet_header*)buffer);
+					print_rt_ptr(tablecpy);
 #endif
 
-				err = sendto(sock, buffer, buffersize, 0, (struct sockaddr *) &targetaddr, sizeof(targetaddr));
-				if(err < 0){
-					die("Timer send",errno);
+					err = sendto(sock, buffer, buffersize, 0, (struct sockaddr *) &targetaddr, sizeof(targetaddr));
+					if(err < 0){
+						die("Timer send",errno);
+					}
 				}
 		}
 		
@@ -215,9 +212,8 @@ static void* routingthread(void* data) {
 #endif	
 		if(header.magick == PACKET_HELLO){
 			//not needed with dist vector routing
-#ifdef ROUTING_DEBUG
 			die("Sould not receive hello",-1);
-#endif			
+			
 		}else if(header.magick == PACKET_ROUTING){
 			err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + header.datasize, 0, (struct sockaddr *) &addr, &addrsize);
 			if(err < 0){

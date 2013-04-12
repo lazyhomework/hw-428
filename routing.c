@@ -34,11 +34,7 @@ void print_rt_ptr(struct route* table){
 
 pthread_rwlock_t routing_table_lock;
 
-<<<<<<< HEAD
 void init_routing_table(node whoami) {
-=======
-void init_routing_table(node whoami) {
->>>>>>> 3725e8a2db5594ed5672c57fea9446aeab3ab2d5
 	/* Not really required to lock, but for sanity */
 	size_t neighbor;
 	pthread_rwlock_wrlock(&routing_table_lock);
