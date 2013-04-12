@@ -14,8 +14,7 @@ struct host {
 	int neighbors[MAX_HOSTS+1];
 };
 
-struct host hosts[MAX_HOSTS];
-size_t nhosts;
+extern struct host hosts[MAX_HOSTS];
 
 void printhost(size_t n);
 void __attribute__ ((constructor)) initconfig();

@@ -12,7 +12,7 @@
 #define MAX_ROUTE_TTL 120		//in seconds?
 typedef size_t node;
 
-struct __attribute__((packed)) route {
+struct route {
 	node next_hop;
 	struct hostent *host;
 	unsigned int distance;
@@ -21,9 +21,9 @@ struct __attribute__((packed)) route {
 };
 
 // index = dest.
-struct route routing_table[MAX_HOSTS];
+extern struct route routing_table[MAX_HOSTS];
 
-void print_routing_table(node whoami);
+void print_routing_table(void);
 void print_rt_ptr(struct route*);
 
 
