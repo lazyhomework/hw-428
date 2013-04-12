@@ -248,6 +248,10 @@ void* routingthread(void* data) {
 			print_rt_ptr(path);
 #endif
 			for(size_t i = 0; i < MAX_HOSTS; ++i){
+				
+				/*TODO Add logic so if we rcv from a host we're not neighbored with
+					we establish a connection to them (use addr from recvfrom)
+				*/
 				//we're not part of path AND ( Distance is shorter OR table came from next hop on path )
 				if( !path[i].pathentries[whoami] 
 						&& (path[i].distance < routing_table[i].distance
@@ -284,11 +288,9 @@ int main(int argc, char* argv[]) {
 	int err;
 	
 	setup(argc, argv);
-
 	printhost(whoami);
 	init_routing_table(whoami);
 	
-	printf("size of route %d",sizeof(struct route));
 	
 	print_routing_table(whoami);
 	

@@ -1,7 +1,7 @@
 #!/bin/sh
 echo "" > kil_list.txt
 
-for i in {1,2}
+for i in 1 2 3
 do
 	echo ./server -n $i
 	FILENAME="servout${i}.txt"
@@ -9,5 +9,5 @@ do
 	echo $! >> kil_list.txt
 	
 done
-./server -n 0
+valgrind ./server -n 0
 wait
