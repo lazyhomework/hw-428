@@ -23,7 +23,8 @@
 #ifndef TIMING_DEBUG
 	//#define TIMING_DEBUG
 #endif
-node whoami;
+
+static node whoami;
 
 /*
 TODO list
@@ -45,7 +46,7 @@ static void usage(int err) {
 	exit (err);
 }
 
-void setup(int argc, char* argv[]) {
+static void setup(int argc, char* argv[]) {
 	char ch;
 
 	int required = 0x0;
