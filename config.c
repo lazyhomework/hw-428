@@ -3,8 +3,9 @@
 
 #include "config.h"
 
-const int TERMINATOR=-1;
+struct host hosts[MAX_HOSTS];
 
+const int TERMINATOR=-1;
 
 void __attribute__ ((constructor)) initconfig() {
 	hosts[0] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5000, .routingport=5001, .neighbors = { 1,3,TERMINATOR }});

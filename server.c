@@ -80,7 +80,7 @@ enum thread_types {
 	THREAD_MAX
 };
 
-int getsocket(port p) {
+static int getsocket(port p) {
 	int listenfd;
 	int err;
 	struct sockaddr_in servaddr;
@@ -105,8 +105,7 @@ int getsocket(port p) {
 }
 
 
-
-void* timerthread(void* data){
+static void* timerthread(void* data){
 	unsigned int interval = 10; //in sec
 	int sock = *((int*) data);
 	int buffersize = MAX_HOSTS * sizeof(struct route) + sizeof(struct packet_header);
@@ -178,7 +177,7 @@ void* timerthread(void* data){
 	}
 }
 
-void* routingthread(void* data) {
+static void* routingthread(void* data) {
 	int sock = *((int*) data);
 	int err;
 
@@ -242,7 +241,7 @@ void* routingthread(void* data) {
 				printf("\n");
 			}
 			printf("Old routing table\n");				
-			print_routing_table(whoami);
+			print_routing_table();
 			printf("Table reveived from %lu\n", header.prevhop);
 			print_rt_ptr(path);
 #endif
@@ -269,7 +268,7 @@ void* routingthread(void* data) {
 
 #ifdef ROUTING_DEBUG
 			printf("new routing table updated from host #%ld\n", header.prevhop);
-			print_routing_table(whoami);
+			print_routing_table();
 #endif		
 			pthread_rwlock_unlock(&routing_table_lock);
 		}else{
@@ -291,7 +290,7 @@ int main(int argc, char* argv[]) {
 	init_routing_table(whoami);
 	
 	
-	print_routing_table(whoami);
+	print_routing_table();
 	
 	int sock = getsocket(hosts[whoami].routingport);
 	

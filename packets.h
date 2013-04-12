@@ -8,7 +8,8 @@
 #define MAX_PACKET_TTL 5
 enum packet_type {
 	PACKET_HELLO,
-	PACKET_ROUTING
+	PACKET_ROUTING,
+	PACKET_MAX
 };
 
 struct __attribute__((packed)) packet {
