@@ -15,6 +15,6 @@ void print_pack_h(struct packet_header* p){
 			break;
 	}
 	
-	printf("Type: %s, prev: %ld, dest: %ld, ttl: %ld, size: %ld\b\n", type, p->prevhop,
+	printf("Type: %s, prev: %ld, dest: %ld, ttl: %ld, size: %ld\n", type, p->prevhop,
 		p->dest, p->ttl, p->datasize);
 }

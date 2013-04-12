@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-#define MAX_HOSTS 3
+#define MAX_HOSTS 4
 
 typedef unsigned short port;
 

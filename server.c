@@ -197,40 +197,64 @@ void* routingthread(void* data) {
 
 	while(1){
 	
-		//blocking read
-		err = recvfrom(sock, rcvbuf, sizeof(struct packet_header), 0,(struct sockaddr *)&addr, &addrsize);
+		//blocking read, peeks at data
+		err = recvfrom(sock, rcvbuf, sizeof(struct packet_header), MSG_PEEK,(struct sockaddr *)&addr, &addrsize);
 		if(err < 0){
 			die("Receive from", errno);
 		}else if(err < sizeof(struct packet_header)){
-			//short read
+			die("short read", err);
 		}
 	
 		memcpy(&header, rcvbuf, sizeof(struct packet_header));
-	
+#ifdef ROUTING_DEBUG
+		print_pack_h(&header);
+		printf("Raw buffer\n");
+		for(int i = 0; i < sizeof(struct packet_header); ++i){
+			if(i%4 == 0) printf(" ");
+			printf("%02x",rcvbuf[i]);
+		}
+		printf("\n");
+		
+#endif	
 		if(header.magick == PACKET_HELLO){
 			//not needed with dist vector routing
+#ifdef ROUTING_DEBUG
+			die("Sould not receive hello",-1);
+#endif			
 		}else if(header.magick == PACKET_ROUTING){
-			err = recvfrom(sock, rcvbuf, header.datasize, 0, (struct sockaddr *) &addr, &addrsize);
+			err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + header.datasize, 0, (struct sockaddr *) &addr, &addrsize);
 			if(err < 0){
 				die("Receive from", errno);
 			}else if(err < header.datasize){
-				//short read
+				die("short read", err);
 			}
 				
 			pthread_rwlock_wrlock(&routing_table_lock);
 			
-			path = (struct route *) rcvbuf;		
+			path = (struct route *) (rcvbuf+sizeof(struct packet_header));
 			
 #ifdef ROUTING_DEBUG
-			printf("Old routing table\b\n");				
+			printf("Raw buffer\n");
+			for(int k = 0; k < MAX_HOSTS; ++k){
+				for(int i = 0; i < sizeof(struct route); ++i){
+					if(i%4 == 0) printf(" ");
+					printf("%02x",rcvbuf[i + k*sizeof(struct route) + sizeof(struct packet_header)]);
+				}
+				printf("\n");
+			}
+			printf("Old routing table\n");				
 			print_routing_table(whoami);
-			printf("Table reveived from %lu\b\n", header.prevhop);
+			printf("Table reveived from %lu\n", header.prevhop);
 			print_rt_ptr(path);
 #endif
 			for(size_t i = 0; i < MAX_HOSTS; ++i){
+				
+				/*TODO Add logic so if we rcv from a host we're not neighbored with
+					we establish a connection to them (use addr from recvfrom)
+				*/
 				//we're not part of path AND ( Distance is shorter OR table came from next hop on path )
 				if( !path[i].pathentries[whoami] 
-						&& 	(path[i].distance < routing_table[i].distance
+						&& (path[i].distance < routing_table[i].distance
 						|| routing_table[i].next_hop == header.prevhop ) ){
 				
 					routing_table[i].distance = path[i].distance + 1;
@@ -238,23 +262,24 @@ void* routingthread(void* data) {
 					routing_table[i].ttl = MAX_ROUTE_TTL;
 					memcpy(routing_table[i].pathentries, path[i].pathentries, MAX_HOSTS);
 					routing_table[i].pathentries[whoami] = true;
-				//Refresh the ttl on link to our neighbors,(were on their path so prev if fails)
+				//Refresh the ttl on link to our neighbors,(were on their path so prev if stmtnt fails)
 				}else if(routing_table[i].next_hop == header.prevhop && path[i].distance == 1){
 					routing_table[i].ttl = MAX_ROUTE_TTL;
 				}
 			}
 
 #ifdef ROUTING_DEBUG
-			printf("new routing table updated from host #%ld\b\n", header.prevhop);
+			printf("new routing table updated from host #%ld\n", header.prevhop);
 			print_routing_table(whoami);
 #endif		
 			pthread_rwlock_unlock(&routing_table_lock);
+		}else{
+			die("Malformed headerid",-1);
 		}
 
 
 
 	}	
-	free(rcvbuf);	
 	return NULL;
 }
 
@@ -263,9 +288,9 @@ int main(int argc, char* argv[]) {
 	int err;
 	
 	setup(argc, argv);
-
 	printhost(whoami);
 	init_routing_table(whoami);
+	
 	
 	print_routing_table(whoami);
 	
