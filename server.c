@@ -313,6 +313,14 @@ int main(int argc, char* argv[]) {
 		die("pthread_join", errno);
 	}
 
+	err = pthread_join(thread_ids[THREAD_TIMER], NULL);
+	if (err != 0) {
+		die("pthread_join", errno);
+	}
+
+	err = pthread_rwlock_destroy(&routing_table_lock);
+	assert (err == 0);
+
 	return 0;
 }
 
