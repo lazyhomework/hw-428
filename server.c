@@ -235,7 +235,7 @@ void* routingthread(void* data) {
 #ifdef ROUTING_DEBUG
 			printf("Raw buffer\n");
 			for(int k = 0; k < MAX_HOSTS; ++k){
-				for(int i = 0; i < sizeof(struct route); ++i){
+				for(size_t i = 0; i < sizeof(struct route); ++i){
 					if(i%4 == 0) printf(" ");
 					printf("%02x",rcvbuf[i + k*sizeof(struct route) + sizeof(struct packet_header)]);
 				}

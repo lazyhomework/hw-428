@@ -5,7 +5,7 @@
 /*
 lock the table before calling
 */
-void print_routing_table(int whoami){
+void print_routing_table(node whoami){
 	for(size_t i = 0; i < MAX_HOSTS; ++i){
 		printf("To: %zd; next hop: %zd, dist: %u path contains: ", i, routing_table[i].next_hop, routing_table[i].distance);
 		for (size_t k = 0; k < MAX_HOSTS; ++k) {
@@ -32,7 +32,11 @@ void print_rt_ptr(struct route* table){
 
 pthread_rwlock_t routing_table_lock;
 
-void init_routing_table(node_t whoami) {
+<<<<<<< HEAD
+void init_routing_table(node whoami) {
+=======
+void init_routing_table(node whoami) {
+>>>>>>> 3725e8a2db5594ed5672c57fea9446aeab3ab2d5
 	/* Not really required to lock, but for sanity */
 	size_t neighbor;
 	pthread_rwlock_wrlock(&routing_table_lock);
