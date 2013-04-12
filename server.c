@@ -21,7 +21,7 @@
 #endif
 
 #ifndef TIMING_DEBUG
-	#define TIMING_DEBUG
+	//#define TIMING_DEBUG
 #endif
 node whoami;
 
@@ -254,7 +254,7 @@ void* routingthread(void* data) {
 				*/
 				//we're not part of path AND ( Distance is shorter OR table came from next hop on path )
 				if( !path[i].pathentries[whoami] 
-						&& (path[i].distance < routing_table[i].distance +1
+						&& (path[i].distance +1 < routing_table[i].distance
 						|| routing_table[i].next_hop == header.prevhop ) ){
 				
 					routing_table[i].distance = path[i].distance + 1;
