@@ -30,7 +30,7 @@ TODO list
 free host struct in hosts
 */
 
-void die(char* s, int err) {
+static void die(char* s, int err) {
 	printf("%s", s);
 	if (err > 0) {
 		printf(" - ");
@@ -40,7 +40,7 @@ void die(char* s, int err) {
 	exit(err);
 }
 
-void usage(int err) {
+static void usage(int err) {
 	printf("./server -n nodeid\n");
 	exit (err);
 }
@@ -114,7 +114,7 @@ void* timerthread(void* data){
 	struct sockaddr_in targetaddr;
 	struct packet_header header = ((struct packet_header) {.magick=PACKET_ROUTING, .prevhop=whoami, .dest = 0, .ttl=MAX_PACKET_TTL, .datasize=buffersize});
 	
-	unsigned char * buffer = malloc(buffersize);
+	unsigned char buffer[buffersize];
 
 	//tablecpy points to the buffer, starting immediately after the packet header.
 	struct route* tablecpy = (struct route *)(buffer + sizeof(struct packet_header));
@@ -175,8 +175,6 @@ void* timerthread(void* data){
 		}
 		
 	}
-
-	free(buffer);
 }
 
 void* routingthread(void* data) {
