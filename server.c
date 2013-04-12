@@ -202,19 +202,24 @@ void* routingthread(void* data) {
 		if(err < 0){
 			die("Receive from", errno);
 		}else if(err < sizeof(struct packet_header)){
-			//short read
+			die("short read", err);
 		}
 	
 		memcpy(&header, rcvbuf, sizeof(struct packet_header));
-	
+#ifdef ROUTING_DEBUG
+		print_pack_h(&header);
+#endif	
 		if(header.magick == PACKET_HELLO){
 			//not needed with dist vector routing
+#ifdef ROUTING_DEBUG
+			die("Sould not receive hello",-1);
+#endif			
 		}else if(header.magick == PACKET_ROUTING){
 			err = recvfrom(sock, rcvbuf, header.datasize, 0, (struct sockaddr *) &addr, &addrsize);
 			if(err < 0){
 				die("Receive from", errno);
 			}else if(err < header.datasize){
-				//short read
+				die("short read", err);
 			}
 				
 			pthread_rwlock_wrlock(&routing_table_lock);
@@ -222,9 +227,9 @@ void* routingthread(void* data) {
 			path = (struct route *) rcvbuf;		
 			
 #ifdef ROUTING_DEBUG
-			printf("Old routing table\b\n");				
+			printf("Old routing table\n");				
 			print_routing_table(whoami);
-			printf("Table reveived from %lu\b\n", header.prevhop);
+			printf("Table reveived from %lu\n", header.prevhop);
 			print_rt_ptr(path);
 #endif
 			for(size_t i = 0; i < MAX_HOSTS; ++i){
@@ -249,12 +254,13 @@ void* routingthread(void* data) {
 			print_routing_table(whoami);
 #endif		
 			pthread_rwlock_unlock(&routing_table_lock);
+		}else{
+			die("Malformed headerid",-1);
 		}
 
 
 
 	}	
-	free(rcvbuf);	
 	return NULL;
 }
 
