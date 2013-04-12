@@ -16,7 +16,19 @@
 #include "packets.h"
 #include "routing.h"
 
+#ifndef ROUTING_DEBUG	
+	#define ROUTING_DEBUG
+#endif
+
+#ifndef TIMING_DEBUG
+	#define TIMING_DEBUG
+#endif
 node whoami;
+
+/*
+TODO list
+free host struct in hosts
+*/
 
 void die(char* s, int err) {
 	printf("%s", s);
@@ -46,6 +58,9 @@ void setup(int argc, char* argv[]) {
 			case 'n':
 				required |= 0x1;
 				whoami = atoi(optarg);
+				if(whoami > MAX_HOSTS-1){
+					die("Node out of range",-1);
+				}
 				break;
 			case '?':
 			default:
@@ -60,6 +75,7 @@ void setup(int argc, char* argv[]) {
 
 enum thread_types {
 	THREAD_ROUTING,
+	THREAD_TIMER,
 	THREAD_MAX
 };
 
@@ -81,7 +97,7 @@ int getsocket(port p) {
 	servaddr.sin_port = htons(p);
 
 	err = bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
-	if (err == -	1) {
+	if (err == -1) {
 		die("bind", errno);
 	}
 	return listenfd;
@@ -91,76 +107,182 @@ pthread_rwlock_t routing_table_lock;
 
 void init_routing_table() {
 	/* Not really required to lock, but for sanity */
+	size_t neighbor;
 	pthread_rwlock_wrlock(&routing_table_lock);
 	
 	for (size_t i = 0; i < MAX_HOSTS; ++i) {
-		routing_table[i].next_hop = MAX_HOSTS;
+		routing_table[i].next_hop = TERMINATOR;
 		routing_table[i].distance = INFINTITY;
-		routing_table[i].ttl = MAX_TTL;
+		routing_table[i].ttl = MAX_ROUTE_TTL;
+		routing_table[i].host = NULL;
 		memset(routing_table[i].pathentries, false , MAX_HOSTS);
-		routing_table[i].pathentries[0] = TERMINATOR;
 	}
 
+	//Connect to our neighbors
 	for (size_t i = 0; hosts[whoami].neighbors[i] != TERMINATOR; ++i) {
-		routing_table[hosts[whoami].neighbors[i]].pathentries[hosts[whoami].neighbors[i]] = true;
-		routing_table[hosts[whoami].neighbors[i]].next_hop = hosts[whoami].neighbors[i];
-		routing_table[hosts[whoami].neighbors[i]].distance = 1;
+		neighbor = hosts[whoami].neighbors[i];
+
+		routing_table[neighbor].pathentries[neighbor] = true;
+		routing_table[neighbor].next_hop = neighbor;
+		routing_table[neighbor].distance = 1;
+		//Have to free the host struct at end!
+		routing_table[neighbor].host = gethostbyname(hosts[neighbor].hostname);
 	}
 
+	routing_table[whoami].next_hop = whoami;
+	routing_table[whoami].distance = 1;
+	routing_table[whoami].pathentries[whoami] = true;
 	pthread_rwlock_unlock(&routing_table_lock);
 }
 
 
+void* timerthread(void* data){
+	unsigned int interval = 10; //in sec
+	int sock = *((int*) data);
+	int buffersize = MAX_HOSTS * sizeof(struct route) + sizeof(struct packet_header);
+	int err, neighbor;
+	
+	struct sockaddr_in targetaddr;
+	struct packet_header header = ((struct packet_header) {.magick=PACKET_ROUTING, .prevhop=whoami, .dest = 0, .ttl=MAX_PACKET_TTL, .datasize=buffersize});
+	
+	void * buffer = malloc(buffersize);
+
+	//tablecpy points to the buffer, starting immediately after the packet header.
+	struct route* tablecpy = (struct route *)((unsigned int)buffer + sizeof(struct packet_header));
+
+		
+	while(1){
+		sleep(interval);
+		
+		pthread_rwlock_rdlock(&routing_table_lock);
+
+		//update the ttl on all routes		
+		for (size_t i = 0; i < MAX_HOSTS; ++i) {
+			if((routing_table[i].ttl -= interval) <= 0){
+				routing_table[i].next_hop = TERMINATOR;
+				routing_table[i].distance = INFINTITY;
+				routing_table[i].ttl = MAX_ROUTE_TTL;
+				//Leave the host info.
+				
+				memset(routing_table[i].pathentries, false , MAX_HOSTS);
+				routing_table[i].pathentries[0] = TERMINATOR;
+			}
+		}
+		//copy the routing table to buffer.
+		memcpy(tablecpy,routing_table, MAX_HOSTS * sizeof(struct route));
+		
+		pthread_rwlock_unlock(&routing_table_lock);
+		
+		//Clean the data before sending to next router.
+		for(size_t i = 0; i < MAX_HOSTS; ++i){
+			tablecpy[i].next_hop = 0;
+			tablecpy[i].ttl = 0;
+		}
+		
+		//Go through list of neighbors, send the table to them.
+		for (size_t i = 0; hosts[whoami].neighbors[i] != TERMINATOR; ++i) {
+				
+				neighbor = hosts[whoami].neighbors[i];
+				
+				targetaddr.sin_family = tablecpy[neighbor].host->h_addrtype;
+				targetaddr.sin_port = htons(hosts[neighbor].routingport);
+				
+				memcpy( (char*) &targetaddr.sin_addr.s_addr, tablecpy[neighbor].host->h_addr_list[0]
+					, tablecpy[neighbor].host->h_length);
+				
+				header.dest = neighbor;
+				memcpy(buffer,&header,sizeof(struct packet_header));
+
+#ifdef TIMING_DEBUG
+				printf("Sending packet: ");
+				print_pack_h((struct packet_header*)buffer);
+				print_rt_ptr(tablecpy);
+#endif			
+
+				err = sendto(sock, buffer, buffersize, 0, (struct sockaddr *) &targetaddr, sizeof(targetaddr));
+				if(err < 0){
+					die("Timer send",errno);
+				}
+				
+				
+		}
+		
+	}
+
+	free(buffer);
+}
+
 void* routingthread(void* data) {
-	int sock = getsocket(hosts[whoami].routingport);
+	int sock = *((int*) data);
 	int err;
 	socklen_t addrsize;
 
 	struct sockaddr_in addr;
-	struct packet header;
+	struct packet_header header;
 	struct route * path;
 	
 	void * rcvbuf =  malloc(sizeof(unsigned char) * MAX_PACKET);
 	
-	//recv size is potentially bad.
-	err = recvfrom(sock, rcvbuf, PACK_HEAD_SIZE, 0,(struct sockaddr *)&addr, &addrsize);
-	if(err < 0){
-		die("Receive from", errno);
-	}
+
+	while(1){
 	
-	//handle short reads?
-	memcpy(&header, rcvbuf, PACK_HEAD_SIZE);
-	
-	if(header.magick == PACKET_HELLO){
-		//not needed with dist vector routing
-	}else if(header.magick == PACKET_ROUTING){
-		//short read possible
-		err = recvfrom(sock, rcvbuf, header.datasize, 0, (struct sockaddr *) &addr, &addrsize);
+		//blocking read
+		err = recvfrom(sock, rcvbuf, sizeof(struct packet_header), 0,(struct sockaddr *)&addr, &addrsize);
 		if(err < 0){
 			die("Receive from", errno);
+		}else if(err < sizeof(struct packet_header)){
+			//short read
 		}
-				
-		pthread_rwlock_wrlock(&routing_table_lock);
-		
-		path = (struct route *) rcvbuf;		
-		for(size_t i = 0; i < MAX_HOSTS; ++i){
-			
-			//we're not part of path AND ( Distance is shorter OR table came from next hop on path )
-			if( !path[i].pathentries[whoami] 
-					&& 	(path[i].distance < routing_table[i].distance
-					|| routing_table[i].next_hop == header.prevhop ) ){
-				
-				routing_table[i].distance = path[i].distance + 1;
-				routing_table[i].next_hop = header.prevhop;
-				routing_table[i].ttl = MAX_TTL;
-				memcpy(routing_table[i].pathentries, path[i].pathentries, MAX_HOSTS);
-				routing_table[i].pathentries[whoami] = true;
-			}
-		}
-		
-		pthread_rwlock_unlock(&routing_table_lock);
-	}
 	
+		memcpy(&header, rcvbuf, sizeof(struct packet_header));
+	
+		if(header.magick == PACKET_HELLO){
+			//not needed with dist vector routing
+		}else if(header.magick == PACKET_ROUTING){
+			err = recvfrom(sock, rcvbuf, header.datasize, 0, (struct sockaddr *) &addr, &addrsize);
+			if(err < 0){
+				die("Receive from", errno);
+			}else if(err < header.datasize){
+				//short read
+			}
+				
+			pthread_rwlock_wrlock(&routing_table_lock);
+			
+			path = (struct route *) rcvbuf;		
+			
+#ifdef ROUTING_DEBUG
+			printf("Old routing table\b\n");				
+			print_routing_table();
+			printf("Table reveived from %u\b\n", header.prevhop);
+			print_rt_ptr(path);
+#endif
+			for(size_t i = 0; i < MAX_HOSTS; ++i){
+				//we're not part of path AND ( Distance is shorter OR table came from next hop on path )
+				if( !path[i].pathentries[whoami] 
+						&& 	(path[i].distance < routing_table[i].distance
+						|| routing_table[i].next_hop == header.prevhop ) ){
+				
+					routing_table[i].distance = path[i].distance + 1;
+					routing_table[i].next_hop = header.prevhop;
+					routing_table[i].ttl = MAX_ROUTE_TTL;
+					memcpy(routing_table[i].pathentries, path[i].pathentries, MAX_HOSTS);
+					routing_table[i].pathentries[whoami] = true;
+				//Refresh the ttl on link to our neighbors,(were on their path so prev if fails)
+				}else if(routing_table[i].next_hop == header.prevhop && path[i].distance == 1){
+					routing_table[i].ttl = MAX_ROUTE_TTL;
+				}
+			}
+
+#ifdef ROUTING_DEBUG
+			printf("new routing table updated from host #%d\b\n", header.prevhop);
+			print_routing_table();
+#endif		
+			pthread_rwlock_unlock(&routing_table_lock);
+		}
+
+
+
+	}	
 	free(rcvbuf);	
 	return NULL;
 }
@@ -172,12 +294,21 @@ int main(int argc, char* argv[]) {
 	setup(argc, argv);
 	printhost(whoami);
 	init_routing_table();
-
+	
+	print_routing_table();
+	
+	int sock = getsocket(hosts[whoami].routingport);
+	
 	pthread_rwlock_init(&routing_table_lock, NULL);
 
 
 	pthread_t thread_ids[THREAD_MAX];
-	err = pthread_create(&thread_ids[THREAD_ROUTING], NULL, routingthread, NULL);
+	err = pthread_create(&thread_ids[THREAD_ROUTING], NULL, routingthread, &sock);
+	if (err != 0) {
+		die("pthread_create", errno);
+	}
+
+	err = pthread_create(&thread_ids[THREAD_TIMER], NULL, timerthread, &sock);
 	if (err != 0) {
 		die("pthread_create", errno);
 	}
@@ -189,3 +320,4 @@ int main(int argc, char* argv[]) {
 
 	return 0;
 }
+

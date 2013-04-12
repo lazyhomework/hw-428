@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-#define MAX_HOSTS 10
+#define MAX_HOSTS 3
 
 typedef unsigned short port;
 
@@ -11,7 +11,7 @@ struct host {
 	char* hostname;
 	port dataport;
 	port routingport;
-	int neighbors[MAX_HOSTS];
+	int neighbors[MAX_HOSTS+1];
 };
 
 struct host hosts[MAX_HOSTS];

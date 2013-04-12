@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=	-Wall -Wextra -pedantic -pthread
+CFLAGS=	-Wall -Wextra -g -pedantic -pthread
 LDFLAGS= -pthread
 
 server:	server.o config.o packets.o routing.o

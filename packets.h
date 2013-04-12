@@ -2,10 +2,10 @@
 #define PACKETS_H
 
 #include <string.h>
+#include <stdio.h>
 
 #define MAX_PACKET 548
-#define PACK_HEAD_SIZE sizeof(struct packet) - sizeof(void *)
-
+#define MAX_PACKET_TTL 5
 enum packet_type {
 	PACKET_HELLO,
 	PACKET_ROUTING
@@ -14,8 +14,18 @@ enum packet_type {
 struct __attribute__((packed)) packet {
 	enum packet_type magick;
 	size_t prevhop;
+	size_t dest;
+	size_t ttl;
 	size_t datasize;
 	void* data;
+};
+
+struct __attribute__((packed)) packet_header {
+	enum packet_type magick;
+	size_t prevhop;
+	size_t dest;
+	size_t ttl;
+	size_t datasize;
 };
 
 struct hello_packet_data {
@@ -23,6 +33,7 @@ struct hello_packet_data {
 
 };
 
+void print_pack_h(struct packet_header*);
 
 
 
