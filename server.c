@@ -23,14 +23,15 @@
 #ifndef TIMING_DEBUG
 	//#define TIMING_DEBUG
 #endif
-node whoami;
+
+static node whoami;
 
 /*
 TODO list
 free host struct in hosts
 */
 
-void die(char* s, int err) {
+static void die(char* s, int err) {
 	printf("%s", s);
 	if (err > 0) {
 		printf(" - ");
@@ -40,12 +41,12 @@ void die(char* s, int err) {
 	exit(err);
 }
 
-void usage(int err) {
+static void usage(int err) {
 	printf("./server -n nodeid\n");
 	exit (err);
 }
 
-void setup(int argc, char* argv[]) {
+static void setup(int argc, char* argv[]) {
 	char ch;
 
 	int required = 0x0;
@@ -114,7 +115,7 @@ void* timerthread(void* data){
 	struct sockaddr_in targetaddr;
 	struct packet_header header = ((struct packet_header) {.magick=PACKET_ROUTING, .prevhop=whoami, .dest = 0, .ttl=MAX_PACKET_TTL, .datasize=buffersize});
 	
-	unsigned char * buffer = malloc(buffersize);
+	unsigned char buffer[buffersize];
 
 	//tablecpy points to the buffer, starting immediately after the packet header.
 	struct route* tablecpy = (struct route *)(buffer + sizeof(struct packet_header));
@@ -175,8 +176,6 @@ void* timerthread(void* data){
 		}
 		
 	}
-
-	free(buffer);
 }
 
 void* routingthread(void* data) {
@@ -313,6 +312,14 @@ int main(int argc, char* argv[]) {
 	if (err != 0) {
 		die("pthread_join", errno);
 	}
+
+	err = pthread_join(thread_ids[THREAD_TIMER], NULL);
+	if (err != 0) {
+		die("pthread_join", errno);
+	}
+
+	err = pthread_rwlock_destroy(&routing_table_lock);
+	assert (err == 0);
 
 	return 0;
 }
