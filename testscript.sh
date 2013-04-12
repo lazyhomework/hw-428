@@ -1,4 +1,4 @@
-#!bin/bash
+#!/bin/sh
 echo "" > kil_list.txt
 
 for i in {1,2}
@@ -10,3 +10,4 @@ do
 	
 done
 ./server -n 0
+wait
