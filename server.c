@@ -222,6 +222,9 @@ void* routingthread(void* data) {
 	struct route * path;
 	
 	void * rcvbuf =  malloc(sizeof(unsigned char) * MAX_PACKET);
+	if (rcvbuf == NULL) {
+		die("malloc", errno);
+	}
 	
 
 	while(1){
@@ -253,7 +256,7 @@ void* routingthread(void* data) {
 #ifdef ROUTING_DEBUG
 			printf("Old routing table\b\n");				
 			print_routing_table();
-			printf("Table reveived from %u\b\n", header.prevhop);
+			printf("Table reveived from %lu\b\n", header.prevhop);
 			print_rt_ptr(path);
 #endif
 			for(size_t i = 0; i < MAX_HOSTS; ++i){
@@ -274,7 +277,7 @@ void* routingthread(void* data) {
 			}
 
 #ifdef ROUTING_DEBUG
-			printf("new routing table updated from host #%d\b\n", header.prevhop);
+			printf("new routing table updated from host #%ld\b\n", header.prevhop);
 			print_routing_table();
 #endif		
 			pthread_rwlock_unlock(&routing_table_lock);
