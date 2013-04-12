@@ -23,6 +23,10 @@ struct route {
 // index = dest.
 struct route routing_table[MAX_HOSTS];
 
-void print_routing_table();
+void print_routing_table(int whoami);
 void print_rt_ptr(struct route*);
+
+
+extern pthread_rwlock_t routing_table_lock;
+void init_routing_table(int whoami);
 #endif

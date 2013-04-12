@@ -103,37 +103,6 @@ int getsocket(port p) {
 	return listenfd;
 }
 
-pthread_rwlock_t routing_table_lock;
-
-void init_routing_table() {
-	/* Not really required to lock, but for sanity */
-	size_t neighbor;
-	pthread_rwlock_wrlock(&routing_table_lock);
-	
-	for (size_t i = 0; i < MAX_HOSTS; ++i) {
-		routing_table[i].next_hop = TERMINATOR;
-		routing_table[i].distance = INFINTITY;
-		routing_table[i].ttl = MAX_ROUTE_TTL;
-		routing_table[i].host = NULL;
-		memset(routing_table[i].pathentries, false , MAX_HOSTS);
-	}
-
-	//Connect to our neighbors
-	for (size_t i = 0; hosts[whoami].neighbors[i] != TERMINATOR; ++i) {
-		neighbor = hosts[whoami].neighbors[i];
-
-		routing_table[neighbor].pathentries[neighbor] = true;
-		routing_table[neighbor].next_hop = neighbor;
-		routing_table[neighbor].distance = 0;
-		//Have to free the host struct at end!
-		routing_table[neighbor].host = gethostbyname(hosts[neighbor].hostname);
-	}
-
-	routing_table[whoami].next_hop = whoami;
-	routing_table[whoami].distance = 1;
-	routing_table[whoami].pathentries[whoami] = true;
-	pthread_rwlock_unlock(&routing_table_lock);
-}
 
 
 void* timerthread(void* data){
@@ -254,7 +223,7 @@ void* routingthread(void* data) {
 			
 #ifdef ROUTING_DEBUG
 			printf("Old routing table\b\n");				
-			print_routing_table();
+			print_routing_table(whoami);
 			printf("Table reveived from %lu\b\n", header.prevhop);
 			print_rt_ptr(path);
 #endif
@@ -277,7 +246,7 @@ void* routingthread(void* data) {
 
 #ifdef ROUTING_DEBUG
 			printf("new routing table updated from host #%ld\b\n", header.prevhop);
-			print_routing_table();
+			print_routing_table(whoami);
 #endif		
 			pthread_rwlock_unlock(&routing_table_lock);
 		}
@@ -294,10 +263,11 @@ int main(int argc, char* argv[]) {
 	int err;
 	
 	setup(argc, argv);
+
 	printhost(whoami);
-	init_routing_table();
+	init_routing_table(whoami);
 	
-	print_routing_table();
+	print_routing_table(whoami);
 	
 	int sock = getsocket(hosts[whoami].routingport);
 	
