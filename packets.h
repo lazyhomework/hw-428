@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "config.h"
+
 #define MAX_PACKET 548
 #define MAX_PACKET_TTL 5
 enum packet_type {
@@ -18,6 +20,8 @@ struct __attribute__((packed)) packet {
 	size_t dest;
 	size_t ttl;
 	size_t datasize;
+	port data_port;
+	port rout_port;
 	void* data;
 };
 
@@ -27,6 +31,8 @@ struct __attribute__((packed)) packet_header {
 	size_t dest;
 	size_t ttl;
 	size_t datasize;
+	size_t data_port;
+	size_t rout_port;
 };
 
 struct hello_packet_data {

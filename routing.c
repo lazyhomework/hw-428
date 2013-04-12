@@ -37,6 +37,8 @@ pthread_rwlock_t routing_table_lock;
 void init_routing_table(node whoami) {
 	/* Not really required to lock, but for sanity */
 	size_t neighbor;
+	struct hostent * temphost;
+	
 	pthread_rwlock_wrlock(&routing_table_lock);
 	
 	for (size_t i = 0; i < MAX_HOSTS; ++i) {
@@ -46,7 +48,7 @@ void init_routing_table(node whoami) {
 		routing_table[i].host = NULL;
 		memset(routing_table[i].pathentries, false , MAX_HOSTS);
 	}
-
+	
 	//Connect to our neighbors
 	for (size_t i = 0; hosts[whoami].neighbors[i] != TERMINATOR; ++i) {
 		neighbor = hosts[whoami].neighbors[i];
@@ -56,7 +58,16 @@ void init_routing_table(node whoami) {
 		routing_table[neighbor].next_hop = neighbor;
 		routing_table[neighbor].distance = 1;
 		//Have to free the host struct at end!
-		routing_table[neighbor].host = gethostbyname(hosts[neighbor].hostname);
+		
+		temphost = gethostbyname(hosts[neighbor].hostname);
+		
+		routing_table[neighbor].host = (struct sockaddr_in*) malloc(sizeof(struct sockaddr_in));
+		routing_table[neighbor].host->sin_family = temphost->h_addrtype;
+		routing_table[neighbor].host->sin_port = htons(hosts[neighbor].routingport);
+		
+		memcpy(&routing_table[neighbor].host->sin_addr.s_addr, temphost->h_addr_list[0]
+		, temphost->h_length);
+		
 	}
 
 	routing_table[whoami].next_hop = whoami;

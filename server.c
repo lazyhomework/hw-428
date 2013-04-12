@@ -21,7 +21,7 @@
 #endif
 
 #ifndef TIMING_DEBUG
-	//#define TIMING_DEBUG
+	#define TIMING_DEBUG
 #endif
 
 static node whoami;
@@ -112,7 +112,8 @@ static void* timerthread(void* data){
 	int err, neighbor;
 	
 	struct sockaddr_in targetaddr;
-	struct packet_header header = ((struct packet_header) {.magick=PACKET_ROUTING, .prevhop=whoami, .dest = 0, .ttl=MAX_PACKET_TTL, .datasize=buffersize});
+	struct packet_header header = ((struct packet_header) {.magick=PACKET_ROUTING, .prevhop=whoami, .dest = 0, .ttl=MAX_PACKET_TTL, 
+		.datasize=buffersize, .rout_port = hosts[whoami].routingport});
 	
 	unsigned char buffer[buffersize];
 
@@ -131,7 +132,8 @@ static void* timerthread(void* data){
 				routing_table[i].next_hop = whoami;
 				routing_table[i].distance = INFINTITY;
 				routing_table[i].ttl = MAX_ROUTE_TTL;
-				//Leave the host info.
+				free(routing_table[i].host);
+				routing_table[i].host = NULL;
 				
 				memset(routing_table[i].pathentries, false , MAX_HOSTS);
 				routing_table[i].pathentries[0] = TERMINATOR;
@@ -149,12 +151,6 @@ static void* timerthread(void* data){
 				
 					neighbor = i;
 				
-					targetaddr.sin_family = tablecpy[neighbor].host->h_addrtype;
-					targetaddr.sin_port = htons(hosts[neighbor].routingport);
-				
-					memcpy(&targetaddr.sin_addr.s_addr, tablecpy[neighbor].host->h_addr_list[0]
-						, tablecpy[neighbor].host->h_length);
-				
 					header.dest = neighbor;
 					memcpy(buffer,&header,sizeof(struct packet_header));
 
@@ -164,7 +160,7 @@ static void* timerthread(void* data){
 					print_rt_ptr(tablecpy);
 #endif
 
-					err = sendto(sock, buffer, buffersize, 0, (struct sockaddr *) &targetaddr, sizeof(targetaddr));
+					err = sendto(sock, buffer, buffersize, 0, (struct sockaddr *) tablecpy[i].host, sizeof(targetaddr));
 					if(err < 0){
 						die("Timer send",errno);
 					}
@@ -240,6 +236,24 @@ static void* routingthread(void* data) {
 			printf("Table reveived from %lu\n", header.prevhop);
 			print_rt_ptr(path);
 #endif
+			if(routing_table[header.prevhop].host == NULL){
+					
+					/*
+						routing_table[neighbor].host->sin_family = temphost->h_addrtype;
+						routing_table[neighbor].host->sin_port = htons(hosts[neighbor].routingport);
+
+						memcpy(&routing_table[neighbor].host->sin_addr.s_addr, temphost->h_addr_list[0]
+						, temphost->h_length);
+					
+					*/
+					routing_table[header.prevhop].host = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+					
+					routing_table[header.prevhop].host->sin_family = addr.sin_family;
+					routing_table[header.prevhop].host->sin_port = header.rout_port;
+				
+					routing_table[header.prevhop].host->sin_addr.s_addr = addr.sin_addr.s_addr;
+				
+			}
 			for(size_t i = 0; i < MAX_HOSTS; ++i){
 				
 				/*TODO Add logic so if we rcv from a host we're not neighbored with
