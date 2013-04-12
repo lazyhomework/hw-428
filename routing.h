@@ -8,7 +8,7 @@
 
 #include "config.h"
 
-#define INFINTITY UINT_MAX
+#define INFINTITY (UINT_MAX -1)
 #define MAX_ROUTE_TTL 120		//in seconds?
 typedef size_t node;
 
