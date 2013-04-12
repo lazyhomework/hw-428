@@ -23,7 +23,7 @@ struct __attribute__((packed)) route {
 // index = dest.
 struct route routing_table[MAX_HOSTS];
 
-void print_routing_table(node whoami);
+void print_routing_table();
 void print_rt_ptr(struct route*);
 
 
