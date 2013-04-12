@@ -203,8 +203,6 @@ void* timerthread(void* data){
 				if(err < 0){
 					die("Timer send",errno);
 				}
-				
-				
 		}
 		
 	}
@@ -215,13 +213,14 @@ void* timerthread(void* data){
 void* routingthread(void* data) {
 	int sock = *((int*) data);
 	int err;
-	socklen_t addrsize;
 
 	struct sockaddr_in addr;
 	struct packet_header header;
 	struct route * path;
 	
-	void * rcvbuf =  malloc(sizeof(unsigned char) * MAX_PACKET);
+	unsigned char rcvbuf[MAX_PACKET] = { 0 };
+	socklen_t addrsize = sizeof(addr);
+
 	if (rcvbuf == NULL) {
 		die("malloc", errno);
 	}
