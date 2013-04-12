@@ -124,7 +124,7 @@ void init_routing_table() {
 
 		routing_table[neighbor].pathentries[neighbor] = true;
 		routing_table[neighbor].next_hop = neighbor;
-		routing_table[neighbor].distance = 1;
+		routing_table[neighbor].distance = 0;
 		//Have to free the host struct at end!
 		routing_table[neighbor].host = gethostbyname(hosts[neighbor].hostname);
 	}
