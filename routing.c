@@ -38,7 +38,7 @@ void init_routing_table(int whoami) {
 	pthread_rwlock_wrlock(&routing_table_lock);
 	
 	for (size_t i = 0; i < MAX_HOSTS; ++i) {
-		routing_table[i].next_hop = TERMINATOR;
+		routing_table[i].next_hop = whoami;
 		routing_table[i].distance = INFINTITY;
 		routing_table[i].ttl = MAX_ROUTE_TTL;
 		routing_table[i].host = NULL;
