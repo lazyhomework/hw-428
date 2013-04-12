@@ -123,7 +123,7 @@ void* timerthread(void* data){
 	while(1){
 		sleep(interval);
 		
-		pthread_rwlock_rdlock(&routing_table_lock);
+		pthread_rwlock_wrlock(&routing_table_lock);
 
 		//update the ttl on all routes		
 		for (size_t i = 0; i < MAX_HOSTS; ++i) {
