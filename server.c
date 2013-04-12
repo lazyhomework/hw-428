@@ -145,10 +145,10 @@ void* timerthread(void* data){
 	struct sockaddr_in targetaddr;
 	struct packet_header header = ((struct packet_header) {.magick=PACKET_ROUTING, .prevhop=whoami, .dest = 0, .ttl=MAX_PACKET_TTL, .datasize=buffersize});
 	
-	void * buffer = malloc(buffersize);
+	unsigned char * buffer = malloc(buffersize);
 
 	//tablecpy points to the buffer, starting immediately after the packet header.
-	struct route* tablecpy = (struct route *)((unsigned int)buffer + sizeof(struct packet_header));
+	struct route* tablecpy = (struct route *)(buffer + sizeof(struct packet_header));
 
 		
 	while(1){
@@ -187,7 +187,7 @@ void* timerthread(void* data){
 				targetaddr.sin_family = tablecpy[neighbor].host->h_addrtype;
 				targetaddr.sin_port = htons(hosts[neighbor].routingport);
 				
-				memcpy( (char*) &targetaddr.sin_addr.s_addr, tablecpy[neighbor].host->h_addr_list[0]
+				memcpy(&targetaddr.sin_addr.s_addr, tablecpy[neighbor].host->h_addr_list[0]
 					, tablecpy[neighbor].host->h_length);
 				
 				header.dest = neighbor;
