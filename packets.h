@@ -31,8 +31,8 @@ struct __attribute__((packed)) packet_header {
 	size_t dest;
 	size_t ttl;
 	size_t datasize;
-	size_t data_port;
-	size_t rout_port;
+	port data_port;
+	port rout_port;
 };
 
 struct hello_packet_data {
