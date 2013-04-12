@@ -32,13 +32,13 @@ void print_rt_ptr(struct route* table){
 
 pthread_rwlock_t routing_table_lock;
 
-void init_routing_table(int whoami) {
+void init_routing_table(node_t whoami) {
 	/* Not really required to lock, but for sanity */
 	size_t neighbor;
 	pthread_rwlock_wrlock(&routing_table_lock);
 	
 	for (size_t i = 0; i < MAX_HOSTS; ++i) {
-		routing_table[i].next_hop = TERMINATOR;
+		routing_table[i].next_hop = whoami;
 		routing_table[i].distance = INFINTITY;
 		routing_table[i].ttl = MAX_ROUTE_TTL;
 		routing_table[i].host = NULL;

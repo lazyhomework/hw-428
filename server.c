@@ -166,7 +166,7 @@ void* timerthread(void* data){
 				printf("Sending packet: ");
 				print_pack_h((struct packet_header*)buffer);
 				print_rt_ptr(tablecpy);
-#endif			
+#endif
 
 				err = sendto(sock, buffer, buffersize, 0, (struct sockaddr *) &targetaddr, sizeof(targetaddr));
 				if(err < 0){
@@ -213,8 +213,7 @@ void* routingthread(void* data) {
 			if(i%4 == 0) printf(" ");
 			printf("%02x",rcvbuf[i]);
 		}
-		printf("\n");
-		
+		printf("\n");	
 #endif	
 		if(header.magick == PACKET_HELLO){
 			//not needed with dist vector routing
