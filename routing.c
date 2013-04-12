@@ -50,6 +50,7 @@ void init_routing_table(int whoami) {
 		neighbor = hosts[whoami].neighbors[i];
 
 		routing_table[neighbor].pathentries[neighbor] = true;
+		routing_table[neighbor].pathentries[whoami] = true;
 		routing_table[neighbor].next_hop = neighbor;
 		routing_table[neighbor].distance = 1;
 		//Have to free the host struct at end!
