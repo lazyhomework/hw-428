@@ -193,12 +193,8 @@ static void* routingthread(void* data) {
 		memcpy(&header, rcvbuf, sizeof(struct packet_header));
 #ifdef ROUTING_DEBUG
 		print_pack_h(&header);
-		printf("Raw buffer\n");
-		for(int i = 0; i < sizeof(struct packet_header); ++i){
-			if(i%4 == 0) printf(" ");
-			printf("%02x",rcvbuf[i]);
-		}
-		printf("\n");	
+		//printf("Raw buffer\n");
+		//print_memblock(rcvbuf, sizeof(struct packet_header), 0);
 #endif	
 		if(header.magick == PACKET_HELLO){
 			//not needed with dist vector routing
@@ -217,14 +213,9 @@ static void* routingthread(void* data) {
 			path = (struct route *) (rcvbuf+sizeof(struct packet_header));
 			
 #ifdef ROUTING_DEBUG
-			printf("Raw buffer\n");
-			for(int k = 0; k < MAX_HOSTS; ++k){
-				for(size_t i = 0; i < sizeof(struct route); ++i){
-					if(i%4 == 0) printf(" ");
-					printf("%02x",rcvbuf[i + k*sizeof(struct route) + sizeof(struct packet_header)]);
-				}
-				printf("\n");
-			}
+			//printf("Raw buffer\n");
+			//print_memblock(rcvbuf,sizeof(struct route)*MAX_HOSTS, sizeof(struct route));
+			
 			printf("Old routing table\n");				
 			print_routing_table();
 			printf("Table reveived from %lu\n", header.prevhop);
