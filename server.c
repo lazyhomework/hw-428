@@ -15,14 +15,8 @@
 #include "config.h"
 #include "packets.h"
 #include "routing.h"
+#include "debug.h"
 
-#ifndef ROUTING_DEBUG	
-	#define ROUTING_DEBUG
-#endif
-
-#ifndef TIMING_DEBUG
-	#define TIMING_DEBUG
-#endif
 
 static node whoami;
 
@@ -236,29 +230,16 @@ static void* routingthread(void* data) {
 			printf("Table reveived from %lu\n", header.prevhop);
 			print_rt_ptr(path);
 #endif
+			//If we dont know how to talk to who sent us a message, add it.
 			if(routing_table[header.prevhop].host == NULL){
-					
-					/*
-						routing_table[neighbor].host->sin_family = temphost->h_addrtype;
-						routing_table[neighbor].host->sin_port = htons(hosts[neighbor].routingport);
-
-						memcpy(&routing_table[neighbor].host->sin_addr.s_addr, temphost->h_addr_list[0]
-						, temphost->h_length);
-					
-					*/
-					routing_table[header.prevhop].host = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
-					
-					routing_table[header.prevhop].host->sin_family = addr.sin_family;
-					routing_table[header.prevhop].host->sin_port = header.rout_port;
-				
-					routing_table[header.prevhop].host->sin_addr.s_addr = addr.sin_addr.s_addr;
-				
+				routing_table[header.prevhop].host = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
 			}
-			for(size_t i = 0; i < MAX_HOSTS; ++i){
-				
-				/*TODO Add logic so if we rcv from a host we're not neighbored with
-					we establish a connection to them (use addr from recvfrom)
-				*/
+			//Update our info on how to contact sender on every routing packet
+			routing_table[header.prevhop].host->sin_family = addr.sin_family;
+			routing_table[header.prevhop].host->sin_port = htons(header.rout_port);
+			routing_table[header.prevhop].host->sin_addr.s_addr = addr.sin_addr.s_addr;
+			
+			for(size_t i = 0; i < MAX_HOSTS; ++i){				
 				//we're not part of path AND ( Distance is shorter OR table came from next hop on path )
 				if( !path[i].pathentries[whoami] 
 						&& (path[i].distance +1 < routing_table[i].distance
@@ -269,8 +250,8 @@ static void* routingthread(void* data) {
 					routing_table[i].ttl = MAX_ROUTE_TTL;
 					memcpy(routing_table[i].pathentries, path[i].pathentries, MAX_HOSTS);
 					routing_table[i].pathentries[whoami] = true;
-				//Refresh the ttl on link to our neighbors,(were on their path so prev if stmtnt fails)
-				}else if(routing_table[i].next_hop == header.prevhop && path[i].distance == 1){
+				//Refresh the ttl on paths through sender
+				}else if(routing_table[i].next_hop == header.prevhop ){
 					routing_table[i].ttl = MAX_ROUTE_TTL;
 				}
 			}
