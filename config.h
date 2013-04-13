@@ -3,7 +3,7 @@
 
 #include <string.h>
 
-#define MAX_HOSTS 5
+#define MAX_HOSTS 6
 
 typedef unsigned short port;
 
@@ -15,9 +15,9 @@ struct host {
 };
 
 extern struct host hosts[MAX_HOSTS];
+extern const int TERMINATOR;
 
 void printhost(size_t n);
 void __attribute__ ((constructor)) initconfig();
 
-extern const int TERMINATOR;
 #endif

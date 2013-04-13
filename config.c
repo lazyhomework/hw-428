@@ -13,8 +13,9 @@ void __attribute__ ((constructor)) initconfig() {
 	hosts[2] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5020, .routingport=5021, .neighbors = { 1,3, TERMINATOR }});
 	hosts[3] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5030, .routingport=5031, .neighbors = { 2,0 , TERMINATOR }});
 	hosts[4] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5040, .routingport=5041, .neighbors = { 1, TERMINATOR }});
+	
+	hosts[5] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5050, .routingport=5051, .neighbors = { 4, TERMINATOR }});
 	/*
-	hosts[5] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5050, .routingport=5051, .neighbors = { 4, 6, TERMINATOR }});
 	hosts[6] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5060, .routingport=5061, .neighbors = { TERMINATOR }});
 	*/
 }
