@@ -1,4 +1,9 @@
+#include <stdlib.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <pthread.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 #include "routing.h"
 
