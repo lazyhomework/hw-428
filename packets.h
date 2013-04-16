@@ -11,6 +11,7 @@
 enum packet_type {
 	PACKET_HELLO,
 	PACKET_ROUTING,
+	PACKET_DATA,
 	PACKET_MAX
 };
 

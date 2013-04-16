@@ -11,5 +11,9 @@
 	#define TIMING_DEBUG
 #endif
 
+#ifndef FORWARD_DEBUG
+	#define FORWARD_DEBUG
+#endif
+
 void print_memblock(void *buf, size_t size, size_t rowwidth);
 #endif

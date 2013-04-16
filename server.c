@@ -19,10 +19,12 @@
 
 
 static node whoami;
-
+static port dataport;
+static port routingport;
 /*
 TODO list
 free host struct in hosts
+fix unlocked table access in timer thread. tablecpy.host is ptr to mem that should be locked. soln: copy addr to stack.
 */
 
 static void die(char* s, int err) {
@@ -262,6 +264,78 @@ static void* routingthread(void* data) {
 	return NULL;
 }
 
+/*
+Currently has no buffer, forwards as fast a possible.
+Buffer is limited by underlying socket
+*/
+static void* forwardingthread(void *data){
+	int sock = *((int*)data);
+	int err;
+	
+	unsigned char rcvbuf[MAX_PACKET] = { 0 };
+
+	struct sockaddr_in addr;
+	struct packet_header input_header;
+	struct packet_header* out_header = (struct packet_header*) rcvbuf;
+	
+	while(1){
+	
+		//blocking read, peeks at data
+		err = recvfrom(sock, &input_header, sizeof(struct packet_header), MSG_PEEK, NULL, 0);
+		if(err < 0){
+			die("Receive from", errno);
+		}else if(err < sizeof(struct packet_header)){
+			die("short read", err);
+		}
+		
+		//Possibly add other error checking here
+		if(input_header.magick == PACKET_DATA){
+			
+			//blocking read, consumes data
+			err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + input_header.datasize, 0, NULL, 0);
+			if(err < 0){
+				die("Receive from", errno);
+			}else if(err < input_header.datasize){
+				die("short read", err);
+			}
+
+			if(input_header.dest > MAX_HOSTS){
+				//drop packet
+#ifdef FORWARD_DEBUG
+			printf("Dropped packet for bad dest %u\n", input_header.dest);
+#endif				
+				continue;
+			}else if(input_header.dest == whoami){
+				//consume packet
+				continue;
+			}
+			
+			if((out_header->ttl -= 1) <= 0){
+				//drop packet
+				continue;
+			}
+			
+			out_header->prevhop = whoami;
+			pthread_rwlock_rdlock(&routing_table_lock);
+			
+			if(routing_table[input_header.dest].distance < INFINTITY){
+			
+			}else{
+				//routing error, we can't forward this packet. Drop it
+#ifdef FORWARD_DEBUG
+				printf("Dropped packet for routing error, can't forward. Dest: %u\n", input_header.dest);
+#endif				
+				pthread_rwlock_unlock(&routing_table_lock);
+				continue;
+			}
+		}else{
+			//drop the packet
+#ifdef FORWARD_DEBUG
+			printf("Dropped packet with header type %u\n", input_header.magick);
+#endif
+		}
+	}
+}
 
 int main(int argc, char* argv[]) {
 	int err;
