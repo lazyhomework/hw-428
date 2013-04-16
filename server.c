@@ -306,7 +306,7 @@ static void* forwardingthread(void *data){
 			err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + input_header.datasize, 0, NULL, 0);
 			if(err < 0){
 				die("Receive from", errno);
-			}else if(err < input_header.datasize){
+			}else if(err < input_header.datasize + sizeof(struct packet_header)){
 				die("short read", err);
 			}
 
@@ -321,13 +321,14 @@ static void* forwardingthread(void *data){
 				continue;
 			}
 			
+			//Update ttl, drop if 0
 			if((out_header->ttl -= 1) <= 0){
 				//drop packet
 				continue;
 			}
 			
 			out_header->prevhop = whoami;
-			out_header->data_port = this_dataport;
+			out_header->data_port = htons(this_dataport);
 			out_header->rout_port = htons(this_routingport);
 			
 			pthread_rwlock_rdlock(&routing_table_lock);
@@ -336,7 +337,6 @@ static void* forwardingthread(void *data){
 			if(routing_table[input_header.dest].distance < INFINTITY){
 				next_hop = routing_table[input_header.dest].next_hop;
 				
-				/*Need to distiguish between data and routing!*/
 				addr.sin_family = routing_table[next_hop].host->sin_family;
 				addr.sin_port = htons(routing_table[next_hop].data_port);
 				addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
