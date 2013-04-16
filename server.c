@@ -19,8 +19,8 @@
 
 
 static node whoami;
-static port dataport;
-static port routingport;
+static port this_dataport;
+static port this_routingport;
 /*
 TODO list
 free host struct in hosts
@@ -67,6 +67,9 @@ static void setup(int argc, char* argv[]) {
 	if (required < 0x1) {
 		usage(2);
 	}
+	
+	this_dataport = hosts[whoami].dataport;
+	this_routingport = hosts[whoami].routingport;
 
 }
 
@@ -231,6 +234,7 @@ static void* routingthread(void* data) {
 			routing_table[header.prevhop].host->sin_family = addr.sin_family;
 			routing_table[header.prevhop].host->sin_port = htons(header.rout_port);
 			routing_table[header.prevhop].host->sin_addr.s_addr = addr.sin_addr.s_addr;
+			routing_table[header.prevhop].data_port = htons(header.data_port);
 			
 			for(size_t i = 0; i < MAX_HOSTS; ++i){				
 				//we're not part of path AND ( Distance is shorter OR table came from next hop on path )
@@ -270,7 +274,9 @@ Buffer is limited by underlying socket
 */
 static void* forwardingthread(void *data){
 	int sock = *((int*)data);
-	int err;
+	int err = 0;
+	node next_hop;
+	size_t packet_size = 0;
 	
 	unsigned char rcvbuf[MAX_PACKET] = { 0 };
 
@@ -316,18 +322,34 @@ static void* forwardingthread(void *data){
 			}
 			
 			out_header->prevhop = whoami;
+			out_header->data_port = this_dataport;
+			out_header->rout_port = htons(this_routingport);
+			
 			pthread_rwlock_rdlock(&routing_table_lock);
-			
+
+
 			if(routing_table[input_header.dest].distance < INFINTITY){
-			
+				next_hop = routing_table[input_header.dest].next_hop;
+				
+				/*Need to distiguish between data and routing!*/
+				addr.sin_family = routing_table[next_hop].host->sin_family;
+				addr.sin_port = htons(routing_table[next_hop].host->sin_port);
+				addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
 			}else{
 				//routing error, we can't forward this packet. Drop it
 #ifdef FORWARD_DEBUG
 				printf("Dropped packet for routing error, can't forward. Dest: %u\n", input_header.dest);
 #endif				
-				pthread_rwlock_unlock(&routing_table_lock);
-				continue;
 			}
+			
+			pthread_rwlock_unlock(&routing_table_lock);
+			
+			packet_size = sizeof(struct packet_header) + input_header.datasize;
+			err = sendto(sock, rcvbuf, packet_size, 0, (struct sockaddr *) &addr, sizeof(addr));
+			if(err < 0){
+				die("Forward packet send",errno);
+			}
+			
 		}else{
 			//drop the packet
 #ifdef FORWARD_DEBUG
