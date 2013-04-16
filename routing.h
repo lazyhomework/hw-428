@@ -15,7 +15,10 @@ typedef size_t node;
 struct route {
 	node next_hop;
 	struct sockaddr_in *host;
+<<<<<<< HEAD
 	port data_port;
+=======
+>>>>>>> 161ab38b3944fd78be32f852c9696a98f4c56f6f
 	unsigned int distance;
 	int ttl;
 	bool pathentries[MAX_HOSTS];
