@@ -17,11 +17,6 @@
 #include "routing.h"
 #include "debug.h"
 
-<<<<<<< HEAD
-=======
-
-static node whoami;
->>>>>>> 161ab38b3944fd78be32f852c9696a98f4c56f6f
 
 static node whoami;
 static port this_dataport;
@@ -147,14 +142,11 @@ static void* timerthread(void* data){
 		//copy the routing table to buffer.
 		memcpy(tablecpy,routing_table, MAX_HOSTS * sizeof(struct route));
 		
+		pthread_rwlock_unlock(&routing_table_lock);
+		
 		header.rout_port = this_routingport;
 		header.data_port = this_dataport;
 		
-<<<<<<< HEAD
-		pthread_rwlock_unlock(&routing_table_lock);
-		
-=======
->>>>>>> 161ab38b3944fd78be32f852c9696a98f4c56f6f
 		//Go through list of neighbors, send the table to them.
 		for (size_t i = 0; i < MAX_HOSTS; ++i) {
 				
@@ -246,10 +238,8 @@ static void* routingthread(void* data) {
 			routing_table[header.prevhop].host->sin_family = addr.sin_family;
 			routing_table[header.prevhop].host->sin_port = htons(header.rout_port);
 			routing_table[header.prevhop].host->sin_addr.s_addr = addr.sin_addr.s_addr;
-<<<<<<< HEAD
+
 			routing_table[header.prevhop].data_port = header.data_port;
-=======
->>>>>>> 161ab38b3944fd78be32f852c9696a98f4c56f6f
 			
 			for(size_t i = 0; i < MAX_HOSTS; ++i){				
 				//we're not part of path AND ( Distance is shorter OR table came from next hop on path )

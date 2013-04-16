@@ -73,10 +73,7 @@ void init_routing_table(node whoami) {
 		memcpy(&routing_table[neighbor].host->sin_addr.s_addr, temphost->h_addr_list[0]
 		, temphost->h_length);
 		
-<<<<<<< HEAD
 		routing_table[neighbor].data_port = htons(hosts[neighbor].dataport);
-=======
->>>>>>> 161ab38b3944fd78be32f852c9696a98f4c56f6f
 	}
 
 	routing_table[whoami].next_hop = whoami;
