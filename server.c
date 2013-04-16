@@ -25,6 +25,7 @@ static port this_routingport;
 TODO list
 free host struct in hosts
 fix unlocked table access in timer thread. tablecpy.host is ptr to mem that should be locked. soln: copy addr to stack.
+Clear up host vs network on ports
 */
 
 static void die(char* s, int err) {
@@ -141,6 +142,9 @@ static void* timerthread(void* data){
 		//copy the routing table to buffer.
 		memcpy(tablecpy,routing_table, MAX_HOSTS * sizeof(struct route));
 		
+		header.rout_port = this_routingport;
+		header.data_port = this_dataport;
+		
 		pthread_rwlock_unlock(&routing_table_lock);
 		
 		//Go through list of neighbors, send the table to them.
@@ -234,7 +238,7 @@ static void* routingthread(void* data) {
 			routing_table[header.prevhop].host->sin_family = addr.sin_family;
 			routing_table[header.prevhop].host->sin_port = htons(header.rout_port);
 			routing_table[header.prevhop].host->sin_addr.s_addr = addr.sin_addr.s_addr;
-			routing_table[header.prevhop].data_port = htons(header.data_port);
+			routing_table[header.prevhop].data_port = header.data_port;
 			
 			for(size_t i = 0; i < MAX_HOSTS; ++i){				
 				//we're not part of path AND ( Distance is shorter OR table came from next hop on path )
@@ -333,7 +337,7 @@ static void* forwardingthread(void *data){
 				
 				/*Need to distiguish between data and routing!*/
 				addr.sin_family = routing_table[next_hop].host->sin_family;
-				addr.sin_port = htons(routing_table[next_hop].host->sin_port);
+				addr.sin_port = htons(routing_table[next_hop].data_port);
 				addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
 			}else{
 				//routing error, we can't forward this packet. Drop it

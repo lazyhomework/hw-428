@@ -68,6 +68,7 @@ void init_routing_table(node whoami) {
 		memcpy(&routing_table[neighbor].host->sin_addr.s_addr, temphost->h_addr_list[0]
 		, temphost->h_length);
 		
+		routing_table[neighbor].data_port = htons(hosts[neighbor].dataport);
 	}
 
 	routing_table[whoami].next_hop = whoami;
