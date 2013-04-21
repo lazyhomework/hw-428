@@ -320,7 +320,7 @@ static void* forwardingthread(void *data){
 			if(input_header.dest > MAX_HOSTS){
 				//drop packet
 #ifdef FORWARD_DEBUG
-			printf("Dropped packet for bad dest %u\n", input_header.dest);
+			printf("Dropped packet for bad dest %zu\n", input_header.dest);
 #endif				
 				continue;
 			}else if(input_header.dest == whoami){
@@ -350,7 +350,7 @@ static void* forwardingthread(void *data){
 			}else{
 				//routing error, we can't forward this packet. Drop it
 #ifdef FORWARD_DEBUG
-				printf("Dropped packet for routing error, can't forward. Dest: %u\n", input_header.dest);
+				printf("Dropped packet for routing error, can't forward. Dest: %zu\n", input_header.dest);
 #endif				
 			}
 			
