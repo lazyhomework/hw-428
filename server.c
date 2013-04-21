@@ -200,6 +200,10 @@ static void* routingthread(void* data) {
 	
 		//blocking read, peeks at data
 		err = recvfrom(sock, rcvbuf, sizeof(struct packet_header), MSG_PEEK,(struct sockaddr *)&addr, &addrsize);
+		if (err < 0 && errno == EINTR) {
+			continue;
+		}
+
 		if(err < 0){
 			die("Receive from", errno);
 		}else if(err < sizeof(struct packet_header)){
@@ -218,6 +222,9 @@ static void* routingthread(void* data) {
 			
 		}else if(header.magick == PACKET_ROUTING){
 			err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + header.datasize, 0, (struct sockaddr *) &addr, &addrsize);
+			if (err < 0 && errno == EINTR) {
+				continue;
+			}
 			if(err < 0){
 				die("Receive from", errno);
 			}else if(err < header.datasize){
@@ -300,6 +307,9 @@ static void* forwardingthread(void *data){
 	
 		//blocking read, peeks at data
 		err = recvfrom(sock, &input_header, sizeof(struct packet_header), MSG_PEEK, NULL, 0);
+		if (err < 0 && errno == EINTR) {
+			continue;
+		}
 		if(err < 0){
 			die("Receive from", errno);
 		}else if(err < sizeof(struct packet_header)){
@@ -311,6 +321,9 @@ static void* forwardingthread(void *data){
 			
 			//blocking read, consumes data
 			err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + input_header.datasize, 0, NULL, 0);
+			if (err < 0 && errno == EINTR) {
+				continue;
+			}
 			if(err < 0){
 				die("Receive from", errno);
 			}else if(err < input_header.datasize + sizeof(struct packet_header)){
