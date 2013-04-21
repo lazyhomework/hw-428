@@ -178,6 +178,7 @@ static void* timerthread(void* data){
 		}
 		
 	}
+	return NULL;
 }
 
 static void* routingthread(void* data) {
