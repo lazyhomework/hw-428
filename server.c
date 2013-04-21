@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <signal.h>
 
 #include "config.h"
 #include "packets.h"
@@ -27,6 +28,12 @@ free host struct in hosts
 fix unlocked table access in timer thread. tablecpy.host is ptr to mem that should be locked. soln: copy addr to stack.
 Clear up host vs network on ports
 */
+
+volatile sig_atomic_t continue_running;
+
+static void hdl(int sig, siginfo_t *siginfo, void* context) {
+	continue_running = 0;
+}
 
 static void die(char* s, int err) {
 	printf("%s", s);
@@ -121,7 +128,7 @@ static void* timerthread(void* data){
 	struct route* tablecpy = (struct route *)(buffer + sizeof(struct packet_header));
 
 		
-	while(1){
+	while(continue_running){
 		sleep(interval);
 		
 		pthread_rwlock_wrlock(&routing_table_lock);
@@ -189,7 +196,7 @@ static void* routingthread(void* data) {
 	}
 	
 
-	while(1){
+	while(continue_running){
 	
 		//blocking read, peeks at data
 		err = recvfrom(sock, rcvbuf, sizeof(struct packet_header), MSG_PEEK,(struct sockaddr *)&addr, &addrsize);
@@ -289,7 +296,7 @@ static void* forwardingthread(void *data){
 	struct packet_header input_header;
 	struct packet_header* out_header = (struct packet_header*) rcvbuf;
 	
-	while(1){
+	while(continue_running){
 	
 		//blocking read, peeks at data
 		err = recvfrom(sock, &input_header, sizeof(struct packet_header), MSG_PEEK, NULL, 0);
@@ -367,6 +374,18 @@ static void* forwardingthread(void *data){
 int main(int argc, char* argv[]) {
 	int err;
 	
+
+	continue_running = true;
+	struct sigaction act;
+	memset(&act, '\0', sizeof(act));
+
+	act.sa_sigaction = &hdl;
+	act.sa_flags = SA_SIGINFO & ~SA_RESTART;
+
+	if (sigaction(SIGHUP, &act, NULL) == -1) {
+		die("sigaction", 0);
+	}
+
 	setup(argc, argv);
 	printhost(whoami);
 	init_routing_table(whoami);
