@@ -13,8 +13,3 @@ void die(char* s, int err) {
 	printf("\n");
 	exit(err);
 }
-
-void usage(int err) {
-	printf("./server -n nodeid\n");
-	exit (err);
-}

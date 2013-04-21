@@ -17,6 +17,7 @@
 #include "packets.h"
 #include "routing.h"
 #include "debug.h"
+#include "util.h"
 
 
 static node whoami;
@@ -33,16 +34,6 @@ volatile sig_atomic_t continue_running;
 
 static void hdl(int sig, siginfo_t *siginfo, void* context) {
 	continue_running = 0;
-}
-
-static void die(char* s, int err) {
-	printf("%s", s);
-	if (err > 0) {
-		printf(" - ");
-		strerror(err);
-	}
-	printf("\n");
-	exit(err);
 }
 
 static void usage(int err) {

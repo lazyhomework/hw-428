@@ -12,5 +12,3 @@
 
 
 __attribute__ ((noreturn, nonnull (1))) void die(char* s, int err);
-
-__attribute__ ((noreturn)) void usage(int err);

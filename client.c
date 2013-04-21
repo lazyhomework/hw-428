@@ -18,6 +18,11 @@
 #include "debug.h"
 #include "util.h"
 
+void usage(int err) {
+	printf("./server -n nodeid\n");
+	exit (err);
+}
+
 static void setup(int argc, char* argv[]) {
 	char ch;
 
