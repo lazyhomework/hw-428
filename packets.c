@@ -7,25 +7,12 @@ void print_pack_h(struct packet_header* p){
 		type = "broken";
 	}
 	else {
+#define X(A, B) case A: \
+		type = B; \
+		break;
+
 		switch(p->magick){
-			case PACKET_ROUTING :
-				type = "routing";
-				break;
-			case PACKET_HELLO :
-				type = "hello";
-				break;
-			case PACKET_DATA :
-				type = "data";
-				break;
-			case PACKET_CREATE:
-				type = "create";
-				break;
-			case PACKET_TEARDOWN:
-				type = "teardown";
-				break;
-			case PACKET_MAX :
-				type = "broken";
-				break;
+			PACKET_TYPES
 		}
 	}
 	

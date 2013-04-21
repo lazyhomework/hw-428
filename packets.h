@@ -8,14 +8,21 @@
 
 #define MAX_PACKET 548
 #define MAX_PACKET_TTL 5
+
+#define PACKET_TYPES \
+	X(PACKET_HELLO, "hello") \
+	X(PACKET_ROUTING, "routing") \
+	X(PACKET_DATA, "data") \
+	X(PACKET_CREATE, "create") \
+	X(PACKET_TEARDOWN, "teardown") \
+	X(PACKET_SENDDATA, "senddata") \
+	X(PACKET_MAX, "max") 
+
+#define X(a,b) a,
 enum packet_type {
-	PACKET_HELLO,
-	PACKET_ROUTING,
-	PACKET_DATA,
-	PACKET_CREATE,
-	PACKET_TEARDOWN,
-	PACKET_MAX
+	PACKET_TYPES
 };
+#undef X
 
 struct __attribute__((packed)) packet {
 	enum packet_type magick;
