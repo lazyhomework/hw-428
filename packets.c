@@ -14,6 +14,9 @@ void print_pack_h(struct packet_header* p){
 			case PACKET_HELLO :
 				type = "hello";
 				break;
+			case PACKET_DATA :
+				type = "data";
+				break;
 			case PACKET_MAX :
 				type = "broken";
 				break;
