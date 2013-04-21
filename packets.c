@@ -23,6 +23,6 @@ void print_pack_h(struct packet_header* p){
 		}
 	}
 	
-	printf("Type: %s, prev: %ld, dest: %ld, routport: %d, ttl: %ld, size: %ld\n", type, p->prevhop,
+	printf("Type: %s, prev: %zd, dest: %zd, routport: %d, ttl: %zd, size: %zd\n", type, p->prevhop,
 		p->dest, p->rout_port, p->ttl, p->datasize);
 }
