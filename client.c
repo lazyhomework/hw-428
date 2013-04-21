@@ -72,8 +72,44 @@ static void setup(int argc, char* argv[]) {
 	}
 }
 
+static struct addrinfo getremotehostname(char* hostname, short port) {
+        struct addrinfo hints, *res0;
+        int err;
+
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = PF_INET; //change this to allow IPv6 - note that other things must be changed too
+        hints.ai_socktype = SOCK_DGRAM;
+        hints.ai_flags = AI_PASSIVE | AI_CANONNAME;
+
+        char portstr[5];
+        snprintf(portstr, sizeof(portstr), "%hd", port);
+
+        err = getaddrinfo(hostname, portstr, &hints, &res0);
+        if (err != 0) {
+                printf("%s", gai_strerror(err));
+                die("getaddrinfo",1);
+        }
+        printf("attempting to connect to %s:%d\n", res0->ai_canonname, ntohs(((struct sockaddr_in*)res0->ai_addr)->sin_port));
+        return *res0;
+
+}
+
+//#define stringy(s) #s
+
+static int getsock(void) {
+	int sendfd, err;
+	struct addrinfo ai = getremotehostname(hosts[source].hostname, hosts[source].routingport);
+	sendfd = socket(ai.ai_family, ai.ai_socktype, ai.ai_protocol);
+	if (sendfd == -1) {
+		die("socket", 1);
+	}
+	return sendfd;
+}
+
 int main(int argc, char* argv[]) {
 	setup(argc, argv);
+
+	int fd = getsock();
 
 	return 0;
 }
