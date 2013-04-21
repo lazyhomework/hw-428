@@ -14,12 +14,11 @@
 
 #include "config.h"
 #include "packets.h"
-#include "routing.h"
 #include "debug.h"
 #include "util.h"
 
 void usage(int err) {
-	printf("./server -n nodeid\n");
+	printf("./client -n nodeid \n");
 	exit (err);
 }
 

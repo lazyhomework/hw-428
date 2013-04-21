@@ -12,6 +12,8 @@ enum packet_type {
 	PACKET_HELLO,
 	PACKET_ROUTING,
 	PACKET_DATA,
+	PACKET_CREATE,
+	PACKET_TEARDOWN,
 	PACKET_MAX
 };
 
@@ -36,13 +38,6 @@ struct __attribute__((packed)) packet_header {
 	port rout_port;
 };
 
-struct hello_packet_data {
-	char wtf_do_i_need_here;
-
-};
-
 void print_pack_h(struct packet_header*);
-
-
 
 #endif
