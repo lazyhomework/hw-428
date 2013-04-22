@@ -78,6 +78,7 @@ enum thread_types {
 	THREAD_MAX
 };
 
+/*
 static int getsocket(port p) {
 	int listenfd;
 	int err;
@@ -101,7 +102,7 @@ static int getsocket(port p) {
 	}
 	return listenfd;
 }
-
+*/
 
 static void* timerthread(void* data){
 	unsigned int interval = 10; //in sec
