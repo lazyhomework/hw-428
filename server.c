@@ -78,31 +78,6 @@ enum thread_types {
 	THREAD_MAX
 };
 
-/*
-static int getsocket(port p) {
-	int listenfd;
-	int err;
-	struct sockaddr_in servaddr;
-
-	listenfd = socket(PF_INET, SOCK_DGRAM, 0);
-	if (listenfd == -1) {
-		die("socket", errno);
-	}
-
-	printf("Obtained listen socket id %d\n", listenfd);
-	
-	memset(&servaddr, 0, sizeof(servaddr));
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	servaddr.sin_port = htons(p);
-
-	err = bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
-	if (err == -1) {
-		die("bind", errno);
-	}
-	return listenfd;
-}
-*/
 
 static void* timerthread(void* data){
 	unsigned int interval = 10; //in sec
@@ -127,7 +102,8 @@ static void* timerthread(void* data){
 
 		//update the ttl on all routes		
 		for (size_t i = 0; i < MAX_HOSTS; ++i) {
-			if((routing_table[i].ttl -= interval) <= 0){
+			//Don't decrement the ttl on table entry for self
+			if(i != whoami && (routing_table[i].ttl -= interval) <= 0){
 				routing_table[i].next_hop = whoami;
 				routing_table[i].distance = INFINTITY;
 				routing_table[i].ttl = MAX_ROUTE_TTL;
@@ -135,7 +111,6 @@ static void* timerthread(void* data){
 				routing_table[i].host = NULL;
 				
 				memset(routing_table[i].pathentries, false , MAX_HOSTS);
-				routing_table[i].pathentries[0] = TERMINATOR;
 			}
 		}
 		//copy the routing table to buffer.
@@ -143,30 +118,30 @@ static void* timerthread(void* data){
 		
 		pthread_rwlock_unlock(&routing_table_lock);
 		
+#ifdef TIMING_DEBUG
+		printf("Table after update ttl \n");
+		print_rt_ptr(tablecpy);
+#endif
+		
+		
 		header.rout_port = this_routingport;
 		header.data_port = this_dataport;
 		
 		//Go through list of neighbors, send the table to them.
 		for (size_t i = 0; i < MAX_HOSTS; ++i) {
 				
-				if(tablecpy[i].distance == 1){
-				
-					neighbor = i;
-				
-					header.dest = neighbor;
-					memcpy(buffer,&header,sizeof(struct packet_header));
+			if(tablecpy[i].distance == 1 && tablecpy[i].host != NULL){
+			
+				neighbor = i;
+			
+				header.dest = neighbor;
+				memcpy(buffer,&header,sizeof(struct packet_header));
 
-#ifdef TIMING_DEBUG
-					printf("Sending packet: ");
-					print_pack_h((struct packet_header*)buffer);
-					print_rt_ptr(tablecpy);
-#endif
-
-					err = sendto(sock, buffer, buffersize, 0, (struct sockaddr *) tablecpy[i].host, sizeof(targetaddr));
-					if(err < 0){
-						die("Timer send",errno);
-					}
+				err = sendto(sock, buffer, buffersize, 0, (struct sockaddr *) tablecpy[i].host, sizeof(targetaddr));
+				if(err < 0){
+					die("Timer send",errno);
 				}
+			}
 		}
 		
 	}
@@ -191,7 +166,7 @@ static void* routingthread(void* data) {
 
 	while(continue_running){
 	
-		//blocking read, peeks at data
+		//non-blocking read, peeks at data
 		err = recvfrom(sock, rcvbuf, sizeof(struct packet_header), MSG_DONTWAIT|MSG_PEEK,(struct sockaddr *)&addr, &addrsize);
 		if (err < 0 && (errno == EINTR || errno == EAGAIN)) {
 			continue;

@@ -9,7 +9,7 @@
 #include "config.h"
 
 #define INFINTITY (UINT_MAX -1)
-#define MAX_ROUTE_TTL 120		//in seconds?
+#define MAX_ROUTE_TTL 40		//in seconds
 typedef size_t node;
 
 struct route {
