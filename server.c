@@ -75,6 +75,7 @@ static void setup(int argc, char* argv[]) {
 enum thread_types {
 	THREAD_ROUTING,
 	THREAD_TIMER,
+	THREAD_FORWARD,
 	THREAD_MAX
 };
 
@@ -128,8 +129,7 @@ static void* timerthread(void* data){
 		header.data_port = this_dataport;
 		
 		//Go through list of neighbors, send the table to them.
-		for (size_t i = 0; i < MAX_HOSTS; ++i) {
-				
+		for (size_t i = 0; i < MAX_HOSTS; ++i) {			
 			if(tablecpy[i].distance == 1 && tablecpy[i].host != NULL){
 			
 				neighbor = i;
@@ -143,7 +143,6 @@ static void* timerthread(void* data){
 				}
 			}
 		}
-		
 	}
 	return NULL;
 }
@@ -228,12 +227,20 @@ static void* routingthread(void* data) {
 				if( !path[i].pathentries[whoami] 
 						&& (path[i].distance +1 < routing_table[i].distance
 						|| routing_table[i].next_hop == header.prevhop ) ){
-				
-					routing_table[i].distance = path[i].distance + 1;
-					routing_table[i].next_hop = header.prevhop;
+
 					routing_table[i].ttl = MAX_ROUTE_TTL;
 					memcpy(routing_table[i].pathentries, path[i].pathentries, MAX_HOSTS);
-					routing_table[i].pathentries[whoami] = true;
+					
+					//Handle the case where next hop lost its link
+					if(path[i].distance == INFINTITY){
+						routing_table[i].distance = INFINTITY;
+						routing_table[i].next_hop = whoami;
+					}else{	
+						routing_table[i].distance = path[i].distance + 1;
+						routing_table[i].next_hop = header.prevhop;
+						routing_table[i].pathentries[whoami] = true;
+					}
+					
 				//Refresh the ttl on paths through sender
 				}else if(routing_table[i].next_hop == header.prevhop ){
 					routing_table[i].ttl = MAX_ROUTE_TTL;
@@ -273,7 +280,7 @@ static void* forwardingthread(void *data){
 	
 	while(continue_running){
 	
-		//blocking read, peeks at data
+		//non-blocking read, peeks at data
 		err = recvfrom(sock, &input_header, sizeof(struct packet_header), MSG_DONTWAIT|MSG_PEEK, NULL, 0);
 		if (err < 0 && (errno == EINTR || errno == EAGAIN)) {
 			continue;
