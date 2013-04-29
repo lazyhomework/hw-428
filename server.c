@@ -308,7 +308,7 @@ static void* routingthread(void* data) {
 					unsigned char *message = malloc(50 * sizeof(*message));
 					fill_buffer(message, 50);
 					
-					err = send_packet(sock, PACKET_CREATE, neighbor, whoami, 2*sizeof(node),data_values,OPTION_DATA);
+					err = send_packet(sock, PACKET_DATA, neighbor, whoami, 50 ,message,OPTION_DATA);
 					if(err < 0){
 						die("send packet",err);
 					}
