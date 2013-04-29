@@ -366,16 +366,18 @@ static void* routingthread(void* data) {
 			printf("Table reveived from %lu\n", header.prevhop);
 			print_rt_ptr(path);
 #endif
-			//If we dont know how to talk to who sent us a message, add it.
-			if(routing_table[header.prevhop].host == NULL){
-				routing_table[header.prevhop].host = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
-			}
-			//Update our info on how to contact sender on every routing packet
-			routing_table[header.prevhop].host->sin_family = addr.sin_family;
-			routing_table[header.prevhop].host->sin_port = htons(header.rout_port);
-			routing_table[header.prevhop].host->sin_addr.s_addr = addr.sin_addr.s_addr;
+			
 
-			routing_table[header.prevhop].data_port = header.data_port;
+			//Update our info on how to contact sender on every routing packet
+			if(routing_table[header.prevhop].host != NULL){
+				routing_table[header.prevhop].host->sin_family = addr.sin_family;
+				routing_table[header.prevhop].host->sin_port = htons(header.rout_port);
+				routing_table[header.prevhop].host->sin_addr.s_addr = addr.sin_addr.s_addr;
+				routing_table[header.prevhop].data_port = header.data_port;
+			}else{
+				//ignore tables from hosts we havn't connected to.
+				continue;
+			}
 			
 			for(size_t i = 0; i < MAX_HOSTS; ++i){				
 				//we're not part of path AND ( Distance is shorter OR table came from next hop on path )

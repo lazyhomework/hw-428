@@ -7,12 +7,15 @@ struct host hosts[MAX_HOSTS];
 
 const int TERMINATOR=-1;
 
+/*
+connections must be symetric to work
+*/
 void __attribute__ ((constructor)) initconfig() {
 	hosts[0] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5000, .routingport=5001, .neighbors = { 1,3,TERMINATOR }});
 	hosts[1] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5010, .routingport=5011, .neighbors = { 0,2,4, TERMINATOR }});
 	hosts[2] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5020, .routingport=5021, .neighbors = { 1,3, TERMINATOR }});
 	hosts[3] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5030, .routingport=5031, .neighbors = { 2,0 , TERMINATOR }});
-	hosts[4] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5040, .routingport=5041, .neighbors = { 1, TERMINATOR }});
+	hosts[4] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5040, .routingport=5041, .neighbors = { 1,5, TERMINATOR }});
 	
 	hosts[5] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5050, .routingport=5051, .neighbors = { 4, TERMINATOR }});
 	/*
