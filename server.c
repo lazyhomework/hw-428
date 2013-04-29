@@ -108,8 +108,11 @@ static void* timerthread(void* data){
 				routing_table[i].next_hop = whoami;
 				routing_table[i].distance = INFINTITY;
 				routing_table[i].ttl = MAX_ROUTE_TTL;
-				free(routing_table[i].host);
-				routing_table[i].host = NULL;
+				
+				if(routing_table[i].host != NULL){
+						free(routing_table[i].host);
+						routing_table[i].host = NULL;
+				}
 				
 				memset(routing_table[i].pathentries, false , MAX_HOSTS);
 			}
@@ -117,7 +120,7 @@ static void* timerthread(void* data){
 		//copy the routing table to buffer.
 		memcpy(tablecpy,routing_table, MAX_HOSTS * sizeof(struct route));
 		
-		pthread_rwlock_unlock(&routing_table_lock);
+
 		
 #ifdef TIMING_DEBUG
 		printf("Table after update ttl \n");
@@ -143,6 +146,7 @@ static void* timerthread(void* data){
 				}
 			}
 		}
+		pthread_rwlock_unlock(&routing_table_lock);
 	}
 	return NULL;
 }
@@ -293,14 +297,39 @@ static void* routingthread(void* data) {
 					break;
 					
 				case PACKET_TEARDOWN:
-					neighbor = (node) (rcvbuf+sizeof(struct packet_header)+sizeof(node));
+					data_values = (node*) (rcvbuf+sizeof(struct packet_header));
+					neighbor = data_values[1];
 					if(neighbor < 0 || neighbor > MAX_HOSTS){
 						printf("bad dest %u\n", neighbor);
 						continue;
 					}
 					
-					//Have to stop accepting path length 1 as new host before this is easy to do.
+					pthread_rwlock_wrlock(&routing_table_lock);
+					
+					routing_table[neighbor].next_hop = whoami;
+					routing_table[neighbor].distance = INFINTITY;
+					routing_table[neighbor].ttl = MAX_ROUTE_TTL;
+					
+					if(routing_table[neighbor].host != NULL){
+						free(routing_table[neighbor].host);
+						routing_table[neighbor].host = NULL;
+					}
+					memset(routing_table[neighbor].pathentries, false , MAX_HOSTS);
+					
+					pthread_rwlock_unlock(&routing_table_lock);
+					
+					//Tell other guy to stop talking to us
+					data_values[0] = neighbor;
+					data_values[1] = whoami;
+					err = send_packet(sock, PACKET_TEARDOWN, neighbor, whoami, 2*sizeof(node),data_values,OPTION_ROUTE);
+					if(err < 0){
+						die("send packet",err);
+					}
+									
+					//Have to stop accepting path length 1 as new host before this works
+					//Also have to ignore path length of 1 if we can't talk to that host.
 					break;
+					
 				case PACKET_SENDDATA:{
 					data_values = (node*) (rcvbuf+sizeof(struct packet_header));
 					neighbor = data_values[1];
