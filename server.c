@@ -147,6 +147,66 @@ static void* timerthread(void* data){
 	return NULL;
 }
 
+
+/*
+Option is 0 to send to routing port, 1 for data.
+Buffer must have a packet_header at the start of it, with accurate datasize field.
+TODO make this an enum
+*/
+int forward_packet(unsigned char *buffer, int sock, int option){
+	struct sockaddr_in addr;
+	struct packet_header* out_header = (struct packet_header*) buffer;
+	
+	int err = 0;
+	
+	//Update ttl, drop if 0
+	if((out_header->ttl -= 1) <= 0){
+		//drop packet
+#ifdef FORWARD_DEBUG
+		printf("Dropped packet for ttl timeout.\n");
+		
+#endif
+		return -1;
+	}
+	
+	out_header->prevhop = whoami;
+	out_header->data_port = htons(this_dataport);
+	out_header->rout_port = htons(this_routingport);
+	
+	pthread_rwlock_rdlock(&routing_table_lock);
+
+
+	if(routing_table[out_header->dest].distance < INFINTITY){
+		node next_hop = routing_table[out_header->dest].next_hop;
+		
+		addr.sin_family = routing_table[next_hop].host->sin_family;
+		addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
+		switch(option){
+			case OPTION_DATA:
+				addr.sin_port = htons(routing_table[next_hop].data_port);
+				break;
+			case OPTION_ROUTE:
+				addr.sin_port = htons(routing_table[next_hop].host->sin_port);
+				break;
+		}
+	}else{
+		//routing error, we can't forward this packet. Drop it
+#ifdef FORWARD_DEBUG
+		printf("Dropped packet for routing error, can't forward. Dest: %zu\n", out_header->dest);
+#endif				
+	}
+	
+	pthread_rwlock_unlock(&routing_table_lock);
+	
+	size_t packet_size = sizeof(struct packet_header) + out_header->datasize;
+	err = sendto(sock, buffer, packet_size, 0, (struct sockaddr *) &addr, sizeof(addr));
+	if(err < 0){
+		die("Forward packet send",errno);
+	}
+	
+	return 0;
+}
+
 static void* routingthread(void* data) {
 	int sock = *((int*) data);
 	int err;
@@ -183,20 +243,86 @@ static void* routingthread(void* data) {
 		//printf("Raw buffer\n");
 		//print_memblock(rcvbuf, sizeof(struct packet_header), 0);
 #endif	
+		
+		err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + header.datasize, MSG_DONTWAIT, (struct sockaddr *) &addr, &addrsize);
+		if (err < 0 && (errno == EINTR || errno == EAGAIN)) {
+			continue;
+		}
+		if(err < 0){
+			die("Receive from", errno);
+		}else if(err < header.datasize){
+			die("short read", err);
+		}
+
 		if(header.magick == PACKET_HELLO){
 			//not needed with dist vector routing
 			die("Sould not receive hello",-1);
+		
+		}else if(header.magick == PACKET_CREATE || header.magick == PACKET_TEARDOWN || header.magick == PACKET_SENDDATA){
 			
+			if(header.dest == whoami){
+				
+				node neighbor;
+				node *data_values;
+				struct hostent *temphost;
+				
+				switch(header.magick){
+				
+				case PACKET_CREATE:
+					//Data order is <from> <to> so second num gets the dest.
+					data_values = (node*) (rcvbuf+sizeof(struct packet_header));
+					neighbor = data_values[1];
+					
+					if(neighbor < 0 || neighbor > MAX_HOSTS){
+						printf("bad dest %u\n", neighbor);
+						continue;
+					}
+					
+					pthread_rwlock_wrlock(&routing_table_lock);
+					add_neighbor(whoami,neighbor);
+					pthread_rwlock_unlock(&routing_table_lock);
+					
+					//Tell new neighbor we're here.
+					data_values[0] = neighbor;
+					data_values[1] = whoami;
+					err = send_packet(sock, PACKET_CREATE, neighbor, whoami, 2*sizeof(node),data_values,OPTION_ROUTE);
+					if(err < 0){
+						die("send packet",err);
+					}
+					//Ideally I'd send the table now, but with poor function planning its too much copy paste.
+					break;
+					
+				case PACKET_TEARDOWN:
+					neighbor = (node) (rcvbuf+sizeof(struct packet_header)+sizeof(node));
+					if(neighbor < 0 || neighbor > MAX_HOSTS){
+						printf("bad dest %u\n", neighbor);
+						continue;
+					}
+					
+					//Have to stop accepting path length 1 as new host before this is easy to do.
+					break;
+				case PACKET_SENDDATA:{
+					data_values = (node*) (rcvbuf+sizeof(struct packet_header));
+					neighbor = data_values[1];
+					
+					unsigned char *message = malloc(50 * sizeof(*message));
+					fill_buffer(message, 50);
+					
+					err = send_packet(sock, PACKET_CREATE, neighbor, whoami, 2*sizeof(node),data_values,OPTION_DATA);
+					if(err < 0){
+						die("send packet",err);
+					}
+					
+					free(message);
+					break;
+				}
+				}
+			
+			}else{
+				forward_packet(rcvbuf,sock,OPTION_ROUTE);
+			}
+		
 		}else if(header.magick == PACKET_ROUTING){
-			err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + header.datasize, MSG_DONTWAIT, (struct sockaddr *) &addr, &addrsize);
-			if (err < 0 && (errno == EINTR || errno == EAGAIN)) {
-				continue;
-			}
-			if(err < 0){
-				die("Receive from", errno);
-			}else if(err < header.datasize){
-				die("short read", err);
-			}
 				
 			pthread_rwlock_wrlock(&routing_table_lock);
 			
@@ -262,65 +388,7 @@ static void* routingthread(void* data) {
 	return NULL;
 }
 
-#define FORWARD_ROUT 0
-#define FORWARD_DATA 1
-/*
-Option is 0 to send to routing port, 1 for data.
-TODO make this an enum
-*/
-int forward_packet(unsigned char *buffer, int sock, int option){
-	struct sockaddr_in addr;
-	struct packet_header* out_header = (struct packet_header*) buffer;
-	
-	int err = 0;
-	
-	//Update ttl, drop if 0
-	if((out_header->ttl -= 1) <= 0){
-		//drop packet
-#ifdef FORWARD_DEBUG
-		printf("Dropped packet for ttl timeout.\n");
-		
-#endif
-		return -1;
-	}
-	
-	out_header->prevhop = whoami;
-	out_header->data_port = htons(this_dataport);
-	out_header->rout_port = htons(this_routingport);
-	
-	pthread_rwlock_rdlock(&routing_table_lock);
 
-
-	if(routing_table[out_header->dest].distance < INFINTITY){
-		node next_hop = routing_table[out_header->dest].next_hop;
-		
-		addr.sin_family = routing_table[next_hop].host->sin_family;
-		addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
-		switch(option){
-			case FORWARD_DATA:
-				addr.sin_port = htons(routing_table[next_hop].data_port);
-				break;
-			case FORWARD_ROUT:
-				addr.sin_port = htons(routing_table[next_hop].host->sin_port);
-				break;
-		}
-	}else{
-		//routing error, we can't forward this packet. Drop it
-#ifdef FORWARD_DEBUG
-		printf("Dropped packet for routing error, can't forward. Dest: %zu\n", out_header->dest);
-#endif				
-	}
-	
-	pthread_rwlock_unlock(&routing_table_lock);
-	
-	size_t packet_size = sizeof(struct packet_header) + out_header->datasize;
-	err = sendto(sock, buffer, packet_size, 0, (struct sockaddr *) &addr, sizeof(addr));
-	if(err < 0){
-		die("Forward packet send",errno);
-	}
-	
-	return 0;
-}
 /*
 Currently has no buffer, forwards as fast a possible.
 Buffer is limited by underlying socket
@@ -328,14 +396,10 @@ Buffer is limited by underlying socket
 static void* forwardingthread(void *data){
 	int sock = *((int*)data);
 	int err = 0;
-	node next_hop;
-	size_t packet_size = 0;
 	
 	unsigned char rcvbuf[MAX_PACKET] = { 0 };
 
-	struct sockaddr_in addr;
 	struct packet_header input_header;
-	struct packet_header* out_header = (struct packet_header*) rcvbuf;
 	
 	while(continue_running){
 	
@@ -379,7 +443,7 @@ static void* forwardingthread(void *data){
 				continue;
 			}
 			
-			err = forward_packet(rcvbuf, sock, FORWARD_DATA);
+			err = forward_packet(rcvbuf, sock, OPTION_DATA);
 			if(err < 0){
 				//handle extra dropped packet stuff here
 			}

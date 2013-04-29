@@ -7,9 +7,14 @@
 #include <stdio.h>
 
 #include "config.h"
+#include "packets.h"
+
+#define OPTION_ROUTE 0
+#define OPTION_DATA 1
 
 #define INFINTITY (UINT_MAX -1)
 #define MAX_ROUTE_TTL 40		//in seconds
+
 typedef size_t node;
 
 struct route {
@@ -30,4 +35,5 @@ void print_rt_ptr(struct route*);
 
 extern pthread_rwlock_t routing_table_lock;
 void init_routing_table(node whoami);
+void add_neighbor(node whoami, size_t neighbor);
 #endif
