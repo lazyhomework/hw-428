@@ -464,7 +464,7 @@ static void* forwardingthread(void *data){
 		}
 		
 		#ifdef FORWARD_DEBUG
-		print_rt_ptr(&input_header);
+		print_pack_h(&input_header);
 		#endif
 		
 		//Possibly add other error checking here
