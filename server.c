@@ -270,7 +270,7 @@ static void* routingthread(void* data) {
 					data_values = (node*) (rcvbuf+sizeof(struct packet_header));
 					neighbor = data_values[1];
 					
-					unsigned char *message = malloc(50 * sizeof(*message));
+					char *message = malloc(50 * sizeof(*message));
 					fill_buffer(message, 50);
 					
 					err = send_packet(sock, PACKET_DATA, neighbor, whoami, 50 ,message,OPTION_DATA);
