@@ -21,8 +21,10 @@
 	
 #define ICMP_TYPES \
 	Y(ICMP_PING, "ping") \
+	Y(ICMP_PING_RESP, "ping response") \
 	Y(ICMP_TIMEOUT, "timeout") \
-	Y(ICMP_ROUTERR, "routing error")
+	Y(ICMP_ROUTERR, "routing error") \
+	Y(ICMP_MAX, "max")
 
 #define X(a,b) a,
 enum packet_type {

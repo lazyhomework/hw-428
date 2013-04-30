@@ -290,11 +290,14 @@ static void* routingthread(void* data) {
 				}
 			
 			}else{
-				printf("forwarding packet\n");
+			//Should only get get direct messages on route port
+				/*
+				printf("forwarding packet: ");
 				err = forward_packet(rcvbuf,sock,whoami,OPTION_ROUTE);
 				if(err == EFORWARD){
 					printf("Could not forward packet, cannot reach dest %zu\n", header.dest);
 				}
+				*/
 			}
 		
 		}else if(header.magick == PACKET_ROUTING){
@@ -383,7 +386,7 @@ static void* forwardingthread(void *data){
 	struct packet_header *out_header = (struct packet_header *) rcvbuf;
 	
 	struct icmp_payload icmp;
-	
+	struct icmp_payload *icmp_data;
 	while(continue_running){
 	
 		//non-blocking read, peeks at data
@@ -433,12 +436,28 @@ static void* forwardingthread(void *data){
 			icmp.type = ICMP_ROUTERR;
 			valid_packet = false;
 		}
+		
 		if(input_header.dest == whoami && valid_packet){
 			//consume packet
-			printf("Consumed packet:\n");
-			print_memblock(rcvbuf+sizeof(struct packet_header), input_header.datasize, 20);
-			send_icmp = false;
-			continue;
+			if(input_header.magick == PACKET_ICMP){
+				icmp_data = (struct icmp_payload *) (rcvbuf + sizeof(struct packet_header));
+				switch(icmp_data->type){
+				case ICMP_PING:
+					icmp.type = ICMP_PING_RESP;
+					icmp.dest = icmp_data->source;
+					send_icmp = true;
+					valid_packet = false;
+					break;
+				default:
+					//do something with the rest of the packet types.
+					continue;
+				}
+			}else{
+				printf("Consumed packet:\n");
+				print_memblock(rcvbuf+sizeof(struct packet_header), input_header.datasize, 20);
+				send_icmp = false;
+				continue;
+			}
 		}
 		
 		//Update ttl, drop if 0
