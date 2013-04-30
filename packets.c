@@ -20,7 +20,7 @@ void print_pack_h(struct packet_header* p){
 		p->prevhop, p->source, p->dest, p->rout_port, p->ttl, p->datasize);
 }
 
-int fill_buffer(unsigned char *buffer, size_t msgsize){
+int fill_buffer(char *buffer, size_t msgsize){
 	if(msgsize < sizeof("Hello") + sizeof("Bye")){
 		return -1;
 	}

@@ -66,5 +66,5 @@ struct __attribute__((packed)) icmp_payload {
 };
 
 void print_pack_h(struct packet_header*);
-
+int fill_buffer(char *buffer, size_t msgsize);
 #endif
