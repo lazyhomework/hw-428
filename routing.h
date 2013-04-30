@@ -9,6 +9,7 @@
 #include "config.h"
 #include "packets.h"
 #include "debug.h"
+#include "util.h"
 
 #define OPTION_ROUTE 0
 #define OPTION_DATA 1

@@ -83,17 +83,15 @@ enum thread_types {
 static void* timerthread(void* data){
 	unsigned int interval = 5; //in sec
 	int sock = *((int*) data);
-	int buffersize = MAX_HOSTS * sizeof(struct route) + sizeof(struct packet_header);
+	int buffersize = MAX_HOSTS * sizeof(struct route);
 	int err, neighbor;
 	
 	struct sockaddr_in targetaddr;
-	struct packet_header header = ((struct packet_header) {.magick=PACKET_ROUTING, .prevhop=whoami, .dest = 0, .ttl=MAX_PACKET_TTL, 
-		.datasize=buffersize, .rout_port = hosts[whoami].routingport});
 	
 	unsigned char buffer[buffersize];
 
 	//tablecpy points to the buffer, starting immediately after the packet header.
-	struct route* tablecpy = (struct route *)(buffer + sizeof(struct packet_header));
+	struct route* tablecpy = (struct route *)buffer;
 
 		
 	while(continue_running){
@@ -110,7 +108,8 @@ static void* timerthread(void* data){
 		}
 		//copy the routing table to buffer.
 		memcpy(tablecpy,routing_table, MAX_HOSTS * sizeof(struct route));
-		
+
+		pthread_rwlock_unlock(&routing_table_lock);
 
 		
 #ifdef TIMING_DEBUG
@@ -118,90 +117,21 @@ static void* timerthread(void* data){
 		print_rt_ptr(tablecpy);
 #endif
 		
-		
-		header.rout_port = this_routingport;
-		header.data_port = this_dataport;
-		
 		//Go through list of neighbors, send the table to them.
 		for (size_t i = 0; i < MAX_HOSTS; ++i) {			
 			if(tablecpy[i].distance == 1 && tablecpy[i].host != NULL){
-			
-				neighbor = i;
-			
-				header.dest = neighbor;
-				memcpy(buffer,&header,sizeof(struct packet_header));
-
-				err = sendto(sock, buffer, buffersize, 0, (struct sockaddr *) tablecpy[i].host, sizeof(targetaddr));
+				err = send_packet(sock, PACKET_ROUTING, i, whoami, buffersize, buffer, OPTION_ROUTE);
 				if(err < 0){
 					die("Timer send",errno);
 				}
 			}
 		}
-		pthread_rwlock_unlock(&routing_table_lock);
 	}
 	return NULL;
 }
 
 
-/*
-Option is 0 to send to routing port, 1 for data.
-TODO make option an enum
-Buffer must have a packet_header at the start of it, with accurate datasize field.
-By modifying the header in place, this method is faster than send_packet().
-*/
-int forward_packet(unsigned char *buffer, int sock, int option){
-	struct sockaddr_in addr;
-	struct packet_header* out_header = (struct packet_header*) buffer;
-	
-	int err = 0;
-	
-	//Update ttl, drop if 0
-	if((out_header->ttl -= 1) <= 0){
-		//drop packet
-#ifdef FORWARD_DEBUG
-		printf("Dropped packet for ttl timeout.\n");
-		
-#endif
-		return -1;
-	}
-	
-	out_header->prevhop = whoami;
-	out_header->data_port = htons(this_dataport);
-	out_header->rout_port = htons(this_routingport);
-	
-	pthread_rwlock_rdlock(&routing_table_lock);
 
-
-	if(routing_table[out_header->dest].distance < INFINTITY){
-		node next_hop = routing_table[out_header->dest].next_hop;
-		
-		addr.sin_family = routing_table[next_hop].host->sin_family;
-		addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
-		switch(option){
-		case OPTION_DATA:
-			addr.sin_port = htons(routing_table[next_hop].data_port);
-			break;
-		case OPTION_ROUTE:
-			addr.sin_port = routing_table[next_hop].host->sin_port;
-			break;
-		}
-	}else{
-		//routing error, we can't forward this packet. Drop it
-#ifdef FORWARD_DEBUG
-		printf("Dropped packet for routing error, can't forward. Dest: %zu\n", out_header->dest);
-#endif				
-	}
-	
-	pthread_rwlock_unlock(&routing_table_lock);
-	
-	size_t packet_size = sizeof(struct packet_header) + out_header->datasize;
-	err = sendto(sock, buffer, packet_size, 0, (struct sockaddr *) &addr, sizeof(addr));
-	if(err < 0){
-		die("Forward packet send",errno);
-	}
-	
-	return 0;
-}
 
 static void* routingthread(void* data) {
 	int sock = *((int*) data);
@@ -364,7 +294,10 @@ static void* routingthread(void* data) {
 			
 			}else{
 				printf("forwarding packet\n");
-				forward_packet(rcvbuf,sock,OPTION_ROUTE);
+				err = forward_packet(rcvbuf,sock,whoami,OPTION_ROUTE);
+				if(err == EFORWARD){
+					printf("Could not forward packet, cannot reach dest %u\n", header.dest);
+				}
 			}
 		
 		}else if(header.magick == PACKET_ROUTING){
@@ -449,7 +382,7 @@ static void* forwardingthread(void *data){
 	unsigned char rcvbuf[MAX_PACKET] = { 0 };
 
 	struct packet_header input_header;
-	
+	struct packet_header *out_header = (struct packet_header *) rcvbuf;
 	while(continue_running){
 	
 		//non-blocking read, peeks at data
@@ -482,23 +415,26 @@ static void* forwardingthread(void *data){
 			}
 
 			if(input_header.dest > MAX_HOSTS){
-			//drop packet
-#ifdef FORWARD_DEBUG
-			printf("Dropped packet for bad dest %zu\n", input_header.dest);
-#endif				
+				//drop packet
+				printf("Dropped packet for bad dest %zu\n", input_header.dest);		
 				continue;
 			}else if(input_header.dest == whoami){
 				//consume packet
-#ifdef FORWARD_DEBUG
 				printf("Consumed packet:\n");
 				print_memblock(rcvbuf+sizeof(struct packet_header), input_header.datasize, 20);
-#endif
 				continue;
 			}
 			
-			err = forward_packet(rcvbuf, sock, OPTION_DATA);
-			if(err < 0){
-				//handle extra dropped packet stuff here
+			//Update ttl, drop if 0
+			if((out_header->ttl -= 1) <= 0){
+				//drop packet
+				printf("Dropped packet for ttl timeout.\n");
+				continue;
+			}
+			
+			err = forward_packet(rcvbuf, sock, whoami, OPTION_DATA);
+			if(err == EFORWARD){
+				printf("Could not forward packet, cannot reach dest %u\n", input_header.dest);
 			}
 			
 		}else{

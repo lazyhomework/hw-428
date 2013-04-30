@@ -60,7 +60,7 @@ struct __attribute__((packed)) icmp_payload {
 	enum icmp_type type;
 	size_t dest;
 	size_t source;
-}
+};
 
 void print_pack_h(struct packet_header*);
 

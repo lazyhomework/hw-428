@@ -114,7 +114,7 @@ void remove_entry(node whoami, node neighbor){
 Returns -2 if can't get to dest, -1 if sendto fails, 0 otherwise
 Do not call from function that currently has routing table lock (this function locks it)
 */
-int send_packet(int sock, enum packet_type type, node dest, node source, size_t datasize, void *data, int option){
+int send_packet_ttl(int sock, enum packet_type type, size_t ttl, node dest, node source, size_t datasize, void *data, int option){
 	int err;
 	struct sockaddr_in addr;
 	struct packet_header header;
@@ -125,7 +125,7 @@ int send_packet(int sock, enum packet_type type, node dest, node source, size_t 
 	header.dest = dest;
 	header.rout_port = hosts[source].routingport;
 	header.data_port = hosts[source].dataport;
-	header.ttl = MAX_PACKET_TTL;
+	header.ttl = ttl;
 	header.prevhop = source;
 	header.datasize = datasize;
 	memcpy(buffer,&header,sizeof(struct packet_header));
@@ -168,5 +168,59 @@ int send_packet(int sock, enum packet_type type, node dest, node source, size_t 
 	}
 	
 	free(buffer);
+	return 0;
+}
+
+/*overloaded for auto max ttl*/
+int send_packet(int sock, enum packet_type type, node dest, node source, size_t datasize, void *data, int option){
+	return send_packet_ttl(sock, type, MAX_PACKET_TTL, dest, source, datasize, data, option);
+}
+
+/*
+Option is 0 to send to routing port, 1 for data.
+TODO make option an enum
+Buffer must have a packet_header at the start of it, with accurate datasize field.
+By modifying the header in place, this method is faster than send_packet().
+DO NOT CALL FROM FUNCTION WITH ROUTING LOCK
+*/
+int forward_packet(unsigned char *buffer, int sock, node whoami, int option){
+	struct sockaddr_in addr;
+	struct packet_header* out_header = (struct packet_header*) buffer;
+	
+	int err = 0;
+	
+	out_header->prevhop = whoami;
+	out_header->data_port = hosts[whoami].dataport;
+	out_header->rout_port = hosts[whoami].routingport;
+	
+	pthread_rwlock_rdlock(&routing_table_lock);
+
+	if(routing_table[out_header->dest].distance < INFINTITY){
+		node next_hop = routing_table[out_header->dest].next_hop;
+		
+		addr.sin_family = routing_table[next_hop].host->sin_family;
+		addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
+		switch(option){
+		case OPTION_DATA:
+			addr.sin_port = htons(routing_table[next_hop].data_port);
+			break;
+		case OPTION_ROUTE:
+			addr.sin_port = routing_table[next_hop].host->sin_port;
+			break;
+		}
+	}else{
+		//routing error, we can't forward this packet. Drop it
+		pthread_rwlock_unlock(&routing_table_lock);
+		return EFORWARD;
+	}
+	
+	pthread_rwlock_unlock(&routing_table_lock);
+	
+	size_t packet_size = sizeof(struct packet_header) + out_header->datasize;
+	err = sendto(sock, buffer, packet_size, 0, (struct sockaddr *) &addr, sizeof(addr));
+	if(err < 0){
+		die("Forward packet send",errno);
+	}
+	
 	return 0;
 }
