@@ -68,9 +68,12 @@ void init_routing_table(node whoami) {
 }
 
 /*Lock table before calling*/
-void add_neighbor(node whoami, size_t neighbor){
+int add_neighbor(node whoami, size_t neighbor){
 		struct hostent * temphost;
 		
+		if(routing_table[neighbor].host != NULL){
+			return -1;
+		}
 		routing_table[neighbor].pathentries[neighbor] = true;
 		routing_table[neighbor].pathentries[whoami] = true;
 		routing_table[neighbor].next_hop = neighbor;
@@ -127,7 +130,7 @@ int send_packet(int sock, enum packet_type type, node dest, node source, size_t 
 		}
 	}else{
 		free(buffer);
-		return -2;
+		return EFORWARD;
 	}
 	pthread_rwlock_unlock(&routing_table_lock);
 	

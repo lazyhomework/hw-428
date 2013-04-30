@@ -283,9 +283,13 @@ static void* routingthread(void* data) {
 					}
 					
 					pthread_rwlock_wrlock(&routing_table_lock);
-					add_neighbor(whoami,neighbor);
+					err = add_neighbor(whoami,neighbor);
 					pthread_rwlock_unlock(&routing_table_lock);
 					
+					if(err < 0){
+						//We already had connection, no need to resend.
+						continue;
+					} 
 					//Tell new neighbor we're here.
 					data_values[0] = neighbor;
 					data_values[1] = whoami;
@@ -306,14 +310,18 @@ static void* routingthread(void* data) {
 					
 					pthread_rwlock_wrlock(&routing_table_lock);
 					
-					routing_table[neighbor].next_hop = whoami;
-					routing_table[neighbor].distance = INFINTITY;
-					routing_table[neighbor].ttl = MAX_ROUTE_TTL;
 					
 					if(routing_table[neighbor].host != NULL){
 						free(routing_table[neighbor].host);
 						routing_table[neighbor].host = NULL;
+					}else{
+						//No connection to tear down.
+						continue;
 					}
+					
+					routing_table[neighbor].next_hop = whoami;
+					routing_table[neighbor].distance = INFINTITY;
+					routing_table[neighbor].ttl = MAX_ROUTE_TTL;
 					memset(routing_table[neighbor].pathentries, false , MAX_HOSTS);
 					
 					pthread_rwlock_unlock(&routing_table_lock);
@@ -336,8 +344,14 @@ static void* routingthread(void* data) {
 					fill_buffer(message, 50);
 					
 					err = send_packet(sock, PACKET_DATA, neighbor, whoami, 50 ,message,OPTION_DATA);
-					if(err < 0){
-						die("send packet",err);
+					if(err < 0 ){
+						if(err == EFORWARD){
+							printf("No path known to dest %u \n", neighbor);
+							continue;
+						}
+						else{
+							die("send packet",err);
+						}
 					}
 					
 					free(message);
