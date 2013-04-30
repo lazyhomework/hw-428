@@ -115,7 +115,7 @@ void remove_entry(node whoami, node neighbor){
 Returns -2 if can't get to dest, -1 if sendto fails, 0 otherwise
 Do not call from function that currently has routing table lock (this function locks it)
 */
-int send_packet_full(int sock, enum packet_type type, size_t ttl, node source, node dest, node prevhop, size_t datasize, void *data, int option){
+static int send_packet_full(int sock, enum packet_type type, size_t ttl, node source, node dest, node prevhop, size_t datasize, void *data, int option){
 	int err;
 	struct sockaddr_in addr;
 	struct packet_header header;
