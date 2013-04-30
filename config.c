@@ -31,7 +31,7 @@ void __attribute__ ((constructor)) initconfig() {
 
 void printhost(size_t n) {
 	
-	printf("Host #%ld (on %s) with data port %hu and routing port %hu with neighbors: ", n, hosts[n].hostname, hosts[n].dataport, hosts[n].routingport);
+	printf("Host #%zu (on %s) with data port %hu and routing port %hu with neighbors: ", n, hosts[n].hostname, hosts[n].dataport, hosts[n].routingport);
 	for (size_t i = 0; hosts[n].neighbors[i] != TERMINATOR; ++i) {
 		printf("%d ", hosts[n].neighbors[i]);
 	}

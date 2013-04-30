@@ -29,7 +29,7 @@ lock the table before calling
 */
 void print_rt_ptr(struct route* table){
 	for(size_t i = 0; i < MAX_HOSTS; ++i){
-		printf("To: %ld; next hop: %zd, dist: %u, TTL: %u path contains: ", i, table[i].next_hop, table[i].distance, table[i].ttl);
+		printf("To: %zd; next hop: %zd, dist: %u, TTL: %u path contains: ", i, table[i].next_hop, table[i].distance, table[i].ttl);
 		for (size_t k = 0; k < MAX_HOSTS; ++k) {
 			printf("%d ", table[i].pathentries[k]);
 	
