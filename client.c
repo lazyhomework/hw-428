@@ -40,8 +40,8 @@ int send_packet(int sock, enum packet_type type, size_t datasize, void *data){
 	header.magick = type;
 	header.dest = dest;
 	header.prevhop = source;
-	header.rout_port = hosts[source].routingport;
-	header.data_port = hosts[source].dataport;
+	header.rout_port = hosts[dest].routingport;
+	header.data_port = hosts[dest].dataport;
 	header.ttl = MAX_PACKET_TTL;
 	header.datasize = datasize;
 	memcpy(buffer,&header,sizeof(struct packet_header));
@@ -49,9 +49,9 @@ int send_packet(int sock, enum packet_type type, size_t datasize, void *data){
 	
 	size_t buffersize = sizeof(struct packet_header) + datasize;
 	
-	err = sendto(sock, buffer, buffersize, 0, 0, 0);
+	err = send(sock, buffer, buffersize, 0);
 	if(err < 0){
-		perror("sendto: ");
+		perror("send: ");
 		free(buffer);
 		return -1;
 	}
@@ -73,7 +73,7 @@ static void setup(int argc, char* argv[]) {
 				break;
 			case 'd':
 				required |= 0x2;
-				source = atoi(optarg);
+				dest = atoi(optarg);
 				break;
 
 			case 'c': /* create link */
@@ -126,12 +126,17 @@ static struct addrinfo getremotehostname(char* hostname, short port) {
 //#define stringy(s) #s
 
 static int getsock(void) {
-	int sendfd;
-	struct addrinfo ai = getremotehostname(hosts[source].hostname, hosts[source].routingport);
+	int sendfd, err;
+	struct addrinfo ai = getremotehostname(hosts[dest].hostname, hosts[dest].routingport);
 	sendfd = socket(ai.ai_family, ai.ai_socktype, ai.ai_protocol);
 	if (sendfd == -1) {
 		die("socket", 1);
 	}
+	err = connect(sendfd, ai.ai_addr, ai.ai_addrlen);
+	if (err < 0) {
+		die("connect", err);
+	}
+	
 	return sendfd;
 }
 
@@ -143,8 +148,8 @@ int main(int argc, char* argv[]) {
 	enum packet_type type;
 	
 	node data[2];
-	data[0] = source;
-	data[1] = dest;
+	data[0] = dest;
+	data[1] = source;
 	
 	switch(mode){
 	

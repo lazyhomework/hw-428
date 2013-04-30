@@ -8,6 +8,7 @@
 
 #include "config.h"
 #include "packets.h"
+#include "debug.h"
 
 #define OPTION_ROUTE 0
 #define OPTION_DATA 1
@@ -19,6 +20,10 @@
 
 typedef size_t node;
 
+/*
+The data port field is stored in machine form,
+and the port in *host is in network form (its the routing port)
+*/
 struct route {
 	node next_hop;
 	struct sockaddr_in *host;

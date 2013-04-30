@@ -74,6 +74,7 @@ int add_neighbor(node whoami, size_t neighbor){
 		if(routing_table[neighbor].host != NULL){
 			return -1;
 		}
+		memset(routing_table[neighbor].pathentries, 0,MAX_HOSTS*sizeof(bool));
 		routing_table[neighbor].pathentries[neighbor] = true;
 		routing_table[neighbor].pathentries[whoami] = true;
 		routing_table[neighbor].next_hop = neighbor;
@@ -82,6 +83,9 @@ int add_neighbor(node whoami, size_t neighbor){
 		
 		temphost = gethostbyname(hosts[neighbor].hostname);
 		
+		if(temphost == NULL){
+			return -1;
+		}
 		routing_table[neighbor].host = (struct sockaddr_in*) malloc(sizeof(struct sockaddr_in));
 		routing_table[neighbor].host->sin_family = temphost->h_addrtype;
 		routing_table[neighbor].host->sin_port = htons(hosts[neighbor].routingport);
@@ -89,7 +93,7 @@ int add_neighbor(node whoami, size_t neighbor){
 		memcpy(&routing_table[neighbor].host->sin_addr.s_addr, temphost->h_addr_list[0]
 		, temphost->h_length);
 		
-		routing_table[neighbor].data_port = htons(hosts[neighbor].dataport);
+		routing_table[neighbor].data_port = hosts[neighbor].dataport;
 }
 
 /*
@@ -112,11 +116,17 @@ int send_packet(int sock, enum packet_type type, node dest, node source, size_t 
 	header.datasize = datasize;
 	memcpy(buffer,&header,sizeof(struct packet_header));
 	memcpy(buffer + sizeof(struct packet_header),data, datasize);
-	
+
+#ifdef ROUTING_DEBUG
+	printf("send: ");
+	print_pack_h(&header);
+#endif
 	pthread_rwlock_rdlock(&routing_table_lock);
 	
 	if(routing_table[dest].distance < INFINTITY){
 		node next_hop = routing_table[dest].next_hop;
+
+	printf("next hop send: %u", next_hop);
 	
 		addr.sin_family = routing_table[next_hop].host->sin_family;
 		addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
@@ -125,11 +135,12 @@ int send_packet(int sock, enum packet_type type, node dest, node source, size_t 
 				addr.sin_port = htons(routing_table[next_hop].data_port);
 				break;
 			case OPTION_ROUTE:
-				addr.sin_port = htons(routing_table[next_hop].host->sin_port);
+				addr.sin_port = routing_table[next_hop].host->sin_port;
 				break;
 		}
 	}else{
 		free(buffer);
+		pthread_rwlock_unlock(&routing_table_lock);
 		return EFORWARD;
 	}
 	pthread_rwlock_unlock(&routing_table_lock);

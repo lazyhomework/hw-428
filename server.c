@@ -26,8 +26,8 @@ static port this_routingport;
 /*
 TODO list
 free host struct in hosts
-fix unlocked table access in timer thread. tablecpy.host is ptr to mem that should be locked. soln: copy addr to stack.
-Clear up host vs network on ports
+***Done***fix unlocked table access in timer thread. tablecpy.host is ptr to mem that should be locked. soln: copy addr to stack.
+***DONE***(see note in routing.h)Clear up host vs network on ports
 */
 
 volatile sig_atomic_t continue_running;
@@ -81,7 +81,7 @@ enum thread_types {
 
 
 static void* timerthread(void* data){
-	unsigned int interval = 10; //in sec
+	unsigned int interval = 5; //in sec
 	int sock = *((int*) data);
 	int buffersize = MAX_HOSTS * sizeof(struct route) + sizeof(struct packet_header);
 	int err, neighbor;
@@ -154,8 +154,9 @@ static void* timerthread(void* data){
 
 /*
 Option is 0 to send to routing port, 1 for data.
+TODO make option an enum
 Buffer must have a packet_header at the start of it, with accurate datasize field.
-TODO make this an enum
+By modifying the header in place, this method is faster than send_packet().
 */
 int forward_packet(unsigned char *buffer, int sock, int option){
 	struct sockaddr_in addr;
@@ -186,12 +187,12 @@ int forward_packet(unsigned char *buffer, int sock, int option){
 		addr.sin_family = routing_table[next_hop].host->sin_family;
 		addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
 		switch(option){
-			case OPTION_DATA:
-				addr.sin_port = htons(routing_table[next_hop].data_port);
-				break;
-			case OPTION_ROUTE:
-				addr.sin_port = htons(routing_table[next_hop].host->sin_port);
-				break;
+		case OPTION_DATA:
+			addr.sin_port = htons(routing_table[next_hop].data_port);
+			break;
+		case OPTION_ROUTE:
+			addr.sin_port = routing_table[next_hop].host->sin_port;
+			break;
 		}
 	}else{
 		//routing error, we can't forward this packet. Drop it
@@ -288,8 +289,10 @@ static void* routingthread(void* data) {
 					
 					if(err < 0){
 						//We already had connection, no need to resend.
+						printf("Ignoring connection request, connection already exists\n");
 						continue;
-					} 
+					}
+					
 					//Tell new neighbor we're here.
 					data_values[0] = neighbor;
 					data_values[1] = whoami;
@@ -297,7 +300,12 @@ static void* routingthread(void* data) {
 					if(err < 0){
 						die("send packet",err);
 					}
-					//Ideally I'd send the table now, but with poor function planning its too much copy paste.
+					
+#ifdef ROUTING_DEBUG
+					printf("Neighbor: %u, whoami %u\n",data_values[0], data_values[1]);
+#endif					
+					
+					//Ideally I'd send the table now, but with poor function planning its too much fixing.
 					break;
 					
 				case PACKET_TEARDOWN:
@@ -333,7 +341,7 @@ static void* routingthread(void* data) {
 					if(err < 0){
 						die("send packet",err);
 					}
-									
+					
 					break;
 					
 				case PACKET_SENDDATA:{
@@ -360,6 +368,7 @@ static void* routingthread(void* data) {
 				}
 			
 			}else{
+				printf("forwarding packet\n");
 				forward_packet(rcvbuf,sock,OPTION_ROUTE);
 			}
 		
@@ -382,10 +391,12 @@ static void* routingthread(void* data) {
 
 			//Update our info on how to contact sender on every routing packet
 			if(routing_table[header.prevhop].host != NULL){
+				/*
 				routing_table[header.prevhop].host->sin_family = addr.sin_family;
 				routing_table[header.prevhop].host->sin_port = htons(header.rout_port);
 				routing_table[header.prevhop].host->sin_addr.s_addr = addr.sin_addr.s_addr;
 				routing_table[header.prevhop].data_port = header.data_port;
+				*/
 			}else{
 				//ignore tables from hosts we havn't connected to.
 				continue;
