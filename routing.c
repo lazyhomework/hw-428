@@ -94,6 +94,7 @@ int add_neighbor(node whoami, size_t neighbor){
 		, temphost->h_length);
 		
 		routing_table[neighbor].data_port = hosts[neighbor].dataport;
+		return 0;
 }
 
 /*write lock table before call*/
@@ -142,7 +143,7 @@ int send_packet_full(int sock, enum packet_type type, size_t ttl, node source, n
 	if(routing_table[dest].distance < INFINTITY){
 		node next_hop = routing_table[dest].next_hop;
 
-		printf("Next hop: %u\n", next_hop);
+		printf("Next hop: %zu\n", next_hop);
 	
 		addr.sin_family = routing_table[next_hop].host->sin_family;
 		addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
