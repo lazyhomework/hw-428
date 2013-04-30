@@ -12,6 +12,7 @@
 #include <getopt.h>
 #include <signal.h>
 
+#include "client.h"
 #include "config.h"
 #include "packets.h"
 #include "debug.h"
@@ -20,7 +21,7 @@
 node source;
 node dest;
 
-enum {
+static enum {
 	CREATE,
 	TEARDOWN,
 	SENDDATA
