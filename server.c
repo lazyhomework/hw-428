@@ -84,9 +84,7 @@ static void* timerthread(void* data){
 	unsigned int interval = 5; //in sec
 	int sock = *((int*) data);
 	int buffersize = MAX_HOSTS * sizeof(struct route);
-	int err, neighbor;
-	
-	struct sockaddr_in targetaddr;
+	int err;
 	
 	unsigned char buffer[buffersize];
 
@@ -190,7 +188,6 @@ static void* routingthread(void* data) {
 				
 				node neighbor;
 				node *data_values;
-				struct hostent *temphost;
 				
 				switch(header.magick){
 				
