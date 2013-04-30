@@ -243,7 +243,7 @@ static void* routingthread(void* data) {
 						//Tell other guy to stop talking to us
 						data_values[0] = neighbor;
 						data_values[1] = whoami;
-						err = send_packet(sock, PACKET_TEARDOWN, neighbor, whoami, 2*sizeof(node),data_values,OPTION_ROUTE);
+						err = send_packet(sock, PACKET_TEARDOWN, whoami, neighbor, 2*sizeof(node),data_values,OPTION_ROUTE);
 						if(err < 0){
 							die("send packet",err);
 						}
@@ -273,7 +273,7 @@ static void* routingthread(void* data) {
 					char *message = malloc(50 * sizeof(*message));
 					fill_buffer(message, 50);
 					
-					err = send_packet(sock, PACKET_DATA, neighbor, whoami, 50 ,message,OPTION_DATA);
+					err = send_packet(sock, PACKET_DATA, whoami, neighbor, 50 ,message,OPTION_DATA);
 					if(err < 0 ){
 						if(err == EFORWARD){
 							printf("No path known to dest %zu \n", neighbor);
@@ -375,11 +375,15 @@ Buffer is limited by underlying socket
 static void* forwardingthread(void *data){
 	int sock = *((int*)data);
 	int err = 0;
+	bool valid_packet = true, send_icmp = false;
 	
 	unsigned char rcvbuf[MAX_PACKET] = { 0 };
 
 	struct packet_header input_header;
 	struct packet_header *out_header = (struct packet_header *) rcvbuf;
+	
+	struct icmp_payload icmp;
+	
 	while(continue_running){
 	
 		//non-blocking read, peeks at data
@@ -397,50 +401,69 @@ static void* forwardingthread(void *data){
 		print_pack_h(&input_header);
 		#endif
 		
-		//Possibly add other error checking here
-		if(input_header.magick == PACKET_DATA){
-			
-			//non-blocking read, consumes data
-			err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + input_header.datasize, MSG_DONTWAIT, NULL, 0);
-			if (err < 0 && (errno == EINTR || errno == EAGAIN)) {
-				continue;
-			}
-			if(err < 0){
-				die("Receive from", errno);
-			}else if(err < input_header.datasize + sizeof(struct packet_header)){
-				die("short read, body", err);
-			}
+		//non-blocking read, consumes data
+		err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + input_header.datasize, MSG_DONTWAIT, NULL, 0);
+		if (err < 0 && (errno == EINTR || errno == EAGAIN)) {
+			continue;
+		}
+		if(err < 0){
+			die("Receive from", errno);
+		}else if(err < input_header.datasize + sizeof(struct packet_header)){
+			die("short read, body", err);
+		}
+		
+		icmp.source = whoami;
+		icmp.dest = input_header.source;
 
-			if(input_header.dest > MAX_HOSTS){
-				//drop packet
-				printf("Dropped packet for bad dest %zu\n", input_header.dest);
-						
-				continue;
-			}else if(input_header.dest == whoami){
-				//consume packet
-				printf("Consumed packet:\n");
-				print_memblock(rcvbuf+sizeof(struct packet_header), input_header.datasize, 20);
-				continue;
-			}
+		if(input_header.magick != PACKET_DATA && input_header.magick != PACKET_ICMP){
+			//drop the packet
+			printf("Dropped packet with header type %u\n", input_header.magick);
+			icmp.type = ICMP_ROUTERR;
+			valid_packet = false;
+			send_icmp = true;
 			
-			//Update ttl, drop if 0
-			if((out_header->ttl -= 1) <= 0){
-				//drop packet
-				printf("Dropped packet for ttl timeout.\n");
-				continue;
+		}else if(input_header.magick != PACKET_ICMP){
+			send_icmp = true;
+		}
+		
+		
+		if(input_header.dest > MAX_HOSTS){
+			//drop packet
+			printf("Dropped packet for bad dest %zu\n", input_header.dest);
+			icmp.type = ICMP_ROUTERR;
+			valid_packet = false;
+		}
+		if(input_header.dest == whoami && valid_packet){
+			//consume packet
+			printf("Consumed packet:\n");
+			print_memblock(rcvbuf+sizeof(struct packet_header), input_header.datasize, 20);
+			send_icmp = false;
+			continue;
+		}
+		
+		//Update ttl, drop if 0
+		if((out_header->ttl -= 1) <= 0){
+			//drop packet
+			printf("Dropped packet for ttl timeout.\n");
+			icmp.type = ICMP_TIMEOUT;
+			valid_packet = false;
+		}
+		
+		if(!valid_packet && send_icmp){
+			err = send_packet(sock, PACKET_ICMP, whoami, input_header.source, sizeof(icmp), &icmp, OPTION_DATA);
+			if(err == EFORWARD){
+				printf("No path known to dest %zu \n", input_header.source);
+			}else if(err < 0){
+				die("send packet",err);
 			}
-			
+		}else if(valid_packet){
 			err = forward_packet(rcvbuf, sock, whoami, OPTION_DATA);
 			if(err == EFORWARD){
 				printf("Could not forward packet, cannot reach dest %zu\n", input_header.dest);
 			}
-			
-		}else{
-			//drop the packet
-#ifdef FORWARD_DEBUG
-			printf("Dropped packet with header type %u\n", input_header.magick);
-#endif
 		}
+		valid_packet = true;
+		send_icmp = false;
 	}
 	return NULL;
 }

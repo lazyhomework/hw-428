@@ -16,6 +16,7 @@
 	X(PACKET_CREATE, "create") \
 	X(PACKET_TEARDOWN, "teardown") \
 	X(PACKET_SENDDATA, "senddata") \
+	X(PACKET_ICMP, "ICMP") \
 	X(PACKET_MAX, "max")
 	
 #define ICMP_TYPES \

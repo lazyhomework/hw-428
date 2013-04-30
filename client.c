@@ -41,6 +41,7 @@ static int client_packet(int sock, enum packet_type type, size_t datasize, void 
 	header.magick = type;
 	header.dest = dest;
 	header.prevhop = source;
+	header.source = source;
 	header.rout_port = hosts[dest].routingport;
 	header.data_port = hosts[dest].dataport;
 	header.ttl = MAX_PACKET_TTL;
