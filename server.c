@@ -105,16 +105,7 @@ static void* timerthread(void* data){
 		for (size_t i = 0; i < MAX_HOSTS; ++i) {
 			//Don't decrement the ttl on table entry for self
 			if(i != whoami && (routing_table[i].ttl -= interval) <= 0){
-				routing_table[i].next_hop = whoami;
-				routing_table[i].distance = INFINTITY;
-				routing_table[i].ttl = MAX_ROUTE_TTL;
-				
-				if(routing_table[i].host != NULL){
-						free(routing_table[i].host);
-						routing_table[i].host = NULL;
-				}
-				
-				memset(routing_table[i].pathentries, false , MAX_HOSTS);
+				remove_entry(whoami, i);
 			}
 		}
 		//copy the routing table to buffer.
@@ -316,31 +307,35 @@ static void* routingthread(void* data) {
 						continue;
 					}
 					
-					pthread_rwlock_wrlock(&routing_table_lock);
+					pthread_rwlock_rdlock(&routing_table_lock);
 					
 					
 					if(routing_table[neighbor].host != NULL){
-						free(routing_table[neighbor].host);
-						routing_table[neighbor].host = NULL;
+						pthread_rwlock_unlock(&routing_table_lock);
+						
+						//Tell other guy to stop talking to us
+						data_values[0] = neighbor;
+						data_values[1] = whoami;
+						err = send_packet(sock, PACKET_TEARDOWN, neighbor, whoami, 2*sizeof(node),data_values,OPTION_ROUTE);
+						if(err < 0){
+							die("send packet",err);
+						}
+						
+						pthread_rwlock_wrlock(&routing_table_lock);
+						
+						for(int i=0; i < MAX_HOSTS; ++i){
+							if(routing_table[i].next_hop == neighbor){
+								remove_entry(whoami, i);
+							}
+						}
 					}else{
 						//No connection to tear down.
-						continue;
+#ifdef ROUTING_DEBUG
+						printf("No connection to break, ignoring message \n");
+#endif										
 					}
-					
-					routing_table[neighbor].next_hop = whoami;
-					routing_table[neighbor].distance = INFINTITY;
-					routing_table[neighbor].ttl = MAX_ROUTE_TTL;
-					memset(routing_table[neighbor].pathentries, false , MAX_HOSTS);
 					
 					pthread_rwlock_unlock(&routing_table_lock);
-					
-					//Tell other guy to stop talking to us
-					data_values[0] = neighbor;
-					data_values[1] = whoami;
-					err = send_packet(sock, PACKET_TEARDOWN, neighbor, whoami, 2*sizeof(node),data_values,OPTION_ROUTE);
-					if(err < 0){
-						die("send packet",err);
-					}
 					
 					break;
 					

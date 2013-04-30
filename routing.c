@@ -96,6 +96,20 @@ int add_neighbor(node whoami, size_t neighbor){
 		routing_table[neighbor].data_port = hosts[neighbor].dataport;
 }
 
+/*write lock table before call*/
+void remove_entry(node whoami, node neighbor){
+
+	routing_table[neighbor].next_hop = whoami;
+	routing_table[neighbor].distance = INFINTITY;
+	routing_table[neighbor].ttl = MAX_ROUTE_TTL;
+	memset(routing_table[neighbor].pathentries, false , MAX_HOSTS);	
+
+	if(routing_table[neighbor].host != NULL){
+		free(routing_table[neighbor].host);
+		routing_table[neighbor].host = NULL;
+	}
+
+}
 /*
 Returns -2 if can't get to dest, -1 if sendto fails, 0 otherwise
 Do not call from function that currently has routing table lock (this function locks it)
@@ -125,18 +139,16 @@ int send_packet(int sock, enum packet_type type, node dest, node source, size_t 
 	
 	if(routing_table[dest].distance < INFINTITY){
 		node next_hop = routing_table[dest].next_hop;
-
-	printf("next hop send: %u", next_hop);
 	
 		addr.sin_family = routing_table[next_hop].host->sin_family;
 		addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
 		switch(option){
-			case OPTION_DATA:
-				addr.sin_port = htons(routing_table[next_hop].data_port);
-				break;
-			case OPTION_ROUTE:
-				addr.sin_port = routing_table[next_hop].host->sin_port;
-				break;
+		case OPTION_DATA:
+			addr.sin_port = htons(routing_table[next_hop].data_port);
+			break;
+		case OPTION_ROUTE:
+			addr.sin_port = routing_table[next_hop].host->sin_port;
+			break;
 		}
 	}else{
 		free(buffer);

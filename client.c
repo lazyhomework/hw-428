@@ -47,6 +47,8 @@ int send_packet(int sock, enum packet_type type, size_t datasize, void *data){
 	memcpy(buffer,&header,sizeof(struct packet_header));
 	memcpy(buffer + sizeof(struct packet_header),data, datasize);
 	
+	print_pack_h(&header);
+	
 	size_t buffersize = sizeof(struct packet_header) + datasize;
 	
 	err = send(sock, buffer, buffersize, 0);
@@ -164,7 +166,7 @@ int main(int argc, char* argv[]) {
 		break;
 	}
 	
-	err = send_packet(fd,PACKET_CREATE, 2*sizeof(node), data);
+	err = send_packet(fd,type, 2*sizeof(node), data);
 	if(err < 0){
 		die("Send to", err);
 	}
