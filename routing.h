@@ -48,4 +48,5 @@ int add_neighbor(node whoami, size_t neighbor);
 int send_packet_ttl(int sock, enum packet_type type, size_t ttl, node dest, node source, size_t datasize, void *data, int option);
 int forward_packet(unsigned char *buffer, int sock, node whoami, int option);
 void remove_entry(node whoami, node neighbor);
+int send_packet(int sock, enum packet_type type, node source, node dest, size_t datasize, void *data, int option);
 #endif
