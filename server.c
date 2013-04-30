@@ -197,7 +197,7 @@ static void* routingthread(void* data) {
 					neighbor = data_values[1];
 					
 					if(neighbor < 0 || neighbor > MAX_HOSTS){
-						printf("bad dest %u\n", neighbor);
+						printf("bad dest %zu\n", neighbor);
 						continue;
 					}
 					
@@ -230,7 +230,7 @@ static void* routingthread(void* data) {
 					data_values = (node*) (rcvbuf+sizeof(struct packet_header));
 					neighbor = data_values[1];
 					if(neighbor < 0 || neighbor > MAX_HOSTS){
-						printf("bad dest %u\n", neighbor);
+						printf("bad dest %zu\n", neighbor);
 						continue;
 					}
 					
@@ -276,7 +276,7 @@ static void* routingthread(void* data) {
 					err = send_packet(sock, PACKET_DATA, neighbor, whoami, 50 ,message,OPTION_DATA);
 					if(err < 0 ){
 						if(err == EFORWARD){
-							printf("No path known to dest %u \n", neighbor);
+							printf("No path known to dest %zu \n", neighbor);
 							continue;
 						}
 						else{
@@ -432,7 +432,7 @@ static void* forwardingthread(void *data){
 			
 			err = forward_packet(rcvbuf, sock, whoami, OPTION_DATA);
 			if(err == EFORWARD){
-				printf("Could not forward packet, cannot reach dest %u\n", input_header.dest);
+				printf("Could not forward packet, cannot reach dest %zu\n", input_header.dest);
 			}
 			
 		}else{
