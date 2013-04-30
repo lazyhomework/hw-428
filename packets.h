@@ -16,13 +16,23 @@
 	X(PACKET_CREATE, "create") \
 	X(PACKET_TEARDOWN, "teardown") \
 	X(PACKET_SENDDATA, "senddata") \
-	X(PACKET_MAX, "max") 
+	X(PACKET_MAX, "max")
+	
+#define ICMP_TYPES \
+	Y(ICMP_PING, "ping") \
+	Y(ICMP_TIMEOUT, "timeout") \
 
 #define X(a,b) a,
 enum packet_type {
 	PACKET_TYPES
 };
 #undef X
+
+#define Y(a,b) a,
+enum icmp_type {
+	ICMP_TYPES
+};
+#undef Y
 
 struct __attribute__((packed)) packet {
 	enum packet_type magick;
@@ -44,6 +54,13 @@ struct __attribute__((packed)) packet_header {
 	port data_port;
 	port rout_port;
 };
+
+
+struct __attribute__((packed)) icmp_payload {
+	enum icmp_type type;
+	size_t dest;
+	size_t source;
+}
 
 void print_pack_h(struct packet_header*);
 
