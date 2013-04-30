@@ -39,11 +39,11 @@ static int client_packet(int sock, enum packet_type type, size_t datasize, void 
 	unsigned char * buffer = malloc(datasize + sizeof(struct packet_header));
 	
 	header.magick = type;
-	header.dest = dest;
+	header.dest = source;
 	header.prevhop = source;
 	header.source = source;
-	header.rout_port = hosts[dest].routingport;
-	header.data_port = hosts[dest].dataport;
+	header.rout_port = hosts[source].routingport;
+	header.data_port = hosts[source].dataport;
 	header.ttl = MAX_PACKET_TTL;
 	header.datasize = datasize;
 	memcpy(buffer,&header,sizeof(struct packet_header));
@@ -131,7 +131,7 @@ static struct addrinfo getremotehostname(char* hostname, short port) {
 
 static int getsock(void) {
 	int sendfd, err;
-	struct addrinfo ai = getremotehostname(hosts[dest].hostname, hosts[dest].routingport);
+	struct addrinfo ai = getremotehostname(hosts[source].hostname, hosts[source].routingport);
 	sendfd = socket(ai.ai_family, ai.ai_socktype, ai.ai_protocol);
 	if (sendfd == -1) {
 		die("socket", 1);
@@ -152,8 +152,8 @@ int main(int argc, char* argv[]) {
 	enum packet_type type;
 	
 	node data[2];
-	data[0] = dest;
-	data[1] = source;
+	data[0] = source;
+	data[1] = dest;
 	
 	switch(mode){
 	
