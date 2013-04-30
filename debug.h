@@ -8,7 +8,7 @@
 #endif
 
 #ifndef TIMING_DEBUG
-	#define TIMING_DEBUG
+	//#define TIMING_DEBUG
 #endif
 
 #ifndef FORWARD_DEBUG

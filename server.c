@@ -460,8 +460,12 @@ static void* forwardingthread(void *data){
 		if(err < 0){
 			die("Receive from", errno);
 		}else if(err < sizeof(struct packet_header)){
-			die("short read", err);
+			die("short read, header", err);
 		}
+		
+		#ifdef FORWARD_DEBUG
+		print_rt_ptr(&input_header);
+		#endif
 		
 		//Possibly add other error checking here
 		if(input_header.magick == PACKET_DATA){
@@ -474,7 +478,7 @@ static void* forwardingthread(void *data){
 			if(err < 0){
 				die("Receive from", errno);
 			}else if(err < input_header.datasize + sizeof(struct packet_header)){
-				die("short read", err);
+				die("short read, body", err);
 			}
 
 			if(input_header.dest > MAX_HOSTS){
@@ -530,6 +534,7 @@ int main(int argc, char* argv[]) {
 	print_routing_table();
 	
 	int sock = getsocket(hosts[whoami].routingport);
+	int data_sock = getsocket(hosts[whoami].dataport);
 	
 	pthread_rwlock_init(&routing_table_lock, NULL);
 
@@ -545,12 +550,22 @@ int main(int argc, char* argv[]) {
 		die("pthread_create", errno);
 	}
 
+	err = pthread_create(&thread_ids[THREAD_FORWARD], NULL, forwardingthread, &data_sock);
+	if (err != 0) {
+		die("pthread_create", errno);
+	}
+
 	err = pthread_join(thread_ids[THREAD_ROUTING], NULL);
 	if (err != 0) {
 		die("pthread_join", errno);
 	}
 
 	err = pthread_join(thread_ids[THREAD_TIMER], NULL);
+	if (err != 0) {
+		die("pthread_join", errno);
+	}
+
+	err = pthread_join(thread_ids[THREAD_FORWARD], NULL);
 	if (err != 0) {
 		die("pthread_join", errno);
 	}

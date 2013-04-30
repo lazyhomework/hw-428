@@ -139,6 +139,8 @@ int send_packet(int sock, enum packet_type type, node dest, node source, size_t 
 	
 	if(routing_table[dest].distance < INFINTITY){
 		node next_hop = routing_table[dest].next_hop;
+
+		printf("Next hop: %u\n", next_hop);
 	
 		addr.sin_family = routing_table[next_hop].host->sin_family;
 		addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
