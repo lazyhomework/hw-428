@@ -114,7 +114,7 @@ void remove_entry(node whoami, node neighbor){
 Returns -2 if can't get to dest, -1 if sendto fails, 0 otherwise
 Do not call from function that currently has routing table lock (this function locks it)
 */
-int send_packet_ttl(int sock, enum packet_type type, size_t ttl, node dest, node source, size_t datasize, void *data, int option){
+int send_packet_full(int sock, enum packet_type type, size_t ttl, node source, node dest, node prevhop, size_t datasize, void *data, int option){
 	int err;
 	struct sockaddr_in addr;
 	struct packet_header header;
@@ -122,11 +122,13 @@ int send_packet_ttl(int sock, enum packet_type type, size_t ttl, node dest, node
 	unsigned char * buffer = malloc(datasize + sizeof(struct packet_header));
 	
 	header.magick = type;
+	header.source = source;
 	header.dest = dest;
-	header.rout_port = hosts[source].routingport;
-	header.data_port = hosts[source].dataport;
+	header.prevhop = prevhop;
+	header.rout_port = hosts[prevhop].routingport;
+	header.data_port = hosts[prevhop].dataport;
 	header.ttl = ttl;
-	header.prevhop = source;
+
 	header.datasize = datasize;
 	memcpy(buffer,&header,sizeof(struct packet_header));
 	memcpy(buffer + sizeof(struct packet_header),data, datasize);
@@ -171,9 +173,9 @@ int send_packet_ttl(int sock, enum packet_type type, size_t ttl, node dest, node
 	return 0;
 }
 
-/*overloaded for auto max ttl*/
-int send_packet(int sock, enum packet_type type, node dest, node source, size_t datasize, void *data, int option){
-	return send_packet_ttl(sock, type, MAX_PACKET_TTL, dest, source, datasize, data, option);
+/*overloaded for auto max ttl and source = prevhop*/
+int send_packet(int sock, enum packet_type type, node source, node dest, size_t datasize, void *data, int option){
+	return send_packet_full(sock, type, MAX_PACKET_TTL, source, dest, source, datasize, data, option);
 }
 
 /*

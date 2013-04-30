@@ -16,8 +16,8 @@ void print_pack_h(struct packet_header* p){
 		}
 	}
 	
-	printf("Type: %s, prev: %zd, dest: %zd, routport: %d, ttl: %zd, size: %zd\n", type, p->prevhop,
-		p->dest, p->rout_port, p->ttl, p->datasize);
+	printf("Type: %s, prev: %zd, source: %zd, dest: %zd, routport: %d, ttl: %zd, size: %zd\n", type,
+		p->prevhop, p->source, p->dest, p->rout_port, p->ttl, p->datasize);
 }
 
 int fill_buffer(unsigned char *buffer, size_t msgsize){

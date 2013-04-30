@@ -120,7 +120,7 @@ static void* timerthread(void* data){
 		//Go through list of neighbors, send the table to them.
 		for (size_t i = 0; i < MAX_HOSTS; ++i) {			
 			if(tablecpy[i].distance == 1 && tablecpy[i].host != NULL){
-				err = send_packet(sock, PACKET_ROUTING, i, whoami, buffersize, buffer, OPTION_ROUTE);
+				err = send_packet(sock, PACKET_ROUTING, whoami, i, buffersize, buffer, OPTION_ROUTE);
 				if(err < 0){
 					die("Timer send",errno);
 				}
@@ -217,7 +217,7 @@ static void* routingthread(void* data) {
 					//Tell new neighbor we're here.
 					data_values[0] = neighbor;
 					data_values[1] = whoami;
-					err = send_packet(sock, PACKET_CREATE, neighbor, whoami, 2*sizeof(node),data_values,OPTION_ROUTE);
+					err = send_packet(sock, PACKET_CREATE, whoami, neighbor,  2*sizeof(node),data_values,OPTION_ROUTE);
 					if(err < 0){
 						die("send packet",err);
 					}
@@ -416,7 +416,8 @@ static void* forwardingthread(void *data){
 
 			if(input_header.dest > MAX_HOSTS){
 				//drop packet
-				printf("Dropped packet for bad dest %zu\n", input_header.dest);		
+				printf("Dropped packet for bad dest %zu\n", input_header.dest);
+						
 				continue;
 			}else if(input_header.dest == whoami){
 				//consume packet

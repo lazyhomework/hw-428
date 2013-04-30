@@ -21,6 +21,7 @@
 #define ICMP_TYPES \
 	Y(ICMP_PING, "ping") \
 	Y(ICMP_TIMEOUT, "timeout") \
+	Y(ICMP_ROUTERR, "routing error")
 
 #define X(a,b) a,
 enum packet_type {
@@ -36,8 +37,9 @@ enum icmp_type {
 
 struct __attribute__((packed)) packet {
 	enum packet_type magick;
-	size_t prevhop;
+	size_t source;
 	size_t dest;
+	size_t prevhop;
 	size_t ttl;
 	size_t datasize;
 	port data_port;
@@ -47,8 +49,9 @@ struct __attribute__((packed)) packet {
 
 struct __attribute__((packed)) packet_header {
 	enum packet_type magick;
-	size_t prevhop;
+	size_t source;
 	size_t dest;
+	size_t prevhop;
 	size_t ttl;
 	size_t datasize;
 	port data_port;
