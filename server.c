@@ -223,7 +223,7 @@ static void* routingthread(void* data) {
 					}
 					
 #ifdef ROUTING_DEBUG
-					printf("Neighbor: %u, whoami %u\n",data_values[0], data_values[1]);
+					printf("Neighbor: %zu, whoami %zu\n",data_values[0], data_values[1]);
 #endif					
 					
 					//Ideally I'd send the table now, but with poor function planning its too much fixing.
@@ -296,7 +296,7 @@ static void* routingthread(void* data) {
 				printf("forwarding packet\n");
 				err = forward_packet(rcvbuf,sock,whoami,OPTION_ROUTE);
 				if(err == EFORWARD){
-					printf("Could not forward packet, cannot reach dest %u\n", header.dest);
+					printf("Could not forward packet, cannot reach dest %zu\n", header.dest);
 				}
 			}
 		
