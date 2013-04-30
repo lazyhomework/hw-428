@@ -31,7 +31,7 @@ void usage(int err) {
 	exit (err);
 }
 
-int send_packet(int sock, enum packet_type type, size_t datasize, void *data){
+static int client_packet(int sock, enum packet_type type, size_t datasize, void *data){
 	int err;
 	struct packet_header header;
 	
@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
 		break;
 	}
 	
-	err = send_packet(fd,type, 2*sizeof(node), data);
+	err = client_packet(fd,type, 2*sizeof(node), data);
 	if(err < 0){
 		die("Send to", err);
 	}
