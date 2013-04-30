@@ -21,7 +21,7 @@ void print_pack_h(struct packet_header* p){
 }
 
 int fill_buffer(unsigned char *buffer, size_t msgsize){
-	if(msgsize < sizeof("Hello") + sizeof("Bye") - 1){
+	if(msgsize < sizeof("Hello") + sizeof("Bye")){
 		return -1;
 	}
 	memset(buffer, 'X', msgsize);

@@ -326,8 +326,6 @@ static void* routingthread(void* data) {
 						die("send packet",err);
 					}
 									
-					//Have to stop accepting path length 1 as new host before this works
-					//Also have to ignore path length of 1 if we can't talk to that host.
 					break;
 					
 				case PACKET_SENDDATA:{

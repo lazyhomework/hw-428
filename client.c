@@ -31,6 +31,35 @@ void usage(int err) {
 	exit (err);
 }
 
+int send_packet(int sock, enum packet_type type, size_t datasize, void *data){
+	int err;
+	struct packet_header header;
+	
+	unsigned char * buffer = malloc(datasize + sizeof(struct packet_header));
+	
+	header.magick = type;
+	header.dest = dest;
+	header.prevhop = source;
+	header.rout_port = hosts[source].routingport;
+	header.data_port = hosts[source].dataport;
+	header.ttl = MAX_PACKET_TTL;
+	header.datasize = datasize;
+	memcpy(buffer,&header,sizeof(struct packet_header));
+	memcpy(buffer + sizeof(struct packet_header),data, datasize);
+	
+	size_t buffersize = sizeof(struct packet_header) + datasize;
+	
+	err = sendto(sock, buffer, buffersize, 0, 0, 0);
+	if(err < 0){
+		perror("sendto: ");
+		free(buffer);
+		return -1;
+	}
+	
+	free(buffer);
+	return 0;
+}
+
 static void setup(int argc, char* argv[]) {
 	char ch;
 
@@ -97,7 +126,7 @@ static struct addrinfo getremotehostname(char* hostname, short port) {
 //#define stringy(s) #s
 
 static int getsock(void) {
-	int sendfd, err;
+	int sendfd;
 	struct addrinfo ai = getremotehostname(hosts[source].hostname, hosts[source].routingport);
 	sendfd = socket(ai.ai_family, ai.ai_socktype, ai.ai_protocol);
 	if (sendfd == -1) {
@@ -110,7 +139,30 @@ int main(int argc, char* argv[]) {
 	setup(argc, argv);
 
 	int fd = getsock();
-
+	int err;
+	enum packet_type type;
+	
+	node data[2];
+	data[0] = source;
+	data[1] = dest;
+	
+	switch(mode){
+	
+	case CREATE:
+		type = PACKET_CREATE;
+		break;
+	case TEARDOWN:
+		type = PACKET_TEARDOWN;
+		break;
+	case SENDDATA:
+		type = PACKET_SENDDATA;
+		break;
+	}
+	
+	err = send_packet(fd,PACKET_CREATE, 2*sizeof(node), data);
+	if(err < 0){
+		die("Send to", err);
+	}
 	return 0;
 }
 
