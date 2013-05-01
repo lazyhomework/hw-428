@@ -21,6 +21,7 @@ static void __attribute__ ((destructor)) destruct(void) {
 	struct pseudofile *tmp = pseudofiles;
 	do {
 		free(tmp->filename);
+		tmp = tmp->next;
 	} while (tmp->next != tmp);
 	free(pseudofiles);
 }
@@ -52,6 +53,7 @@ bool get(const char * const f) {
 		if (strcmp(f, tmp->filename) == 0) {
 			return true;
 		}
+		tmp = tmp->next;
 	} while (tmp != tmp->next);
 	return false;
 }
