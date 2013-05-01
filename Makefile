@@ -4,7 +4,7 @@ LDFLAGS= -pthread
 
 all: server client
 
-server:	server.o config.o packets.o routing.o debug.o util.o packets.h config.h routing.h debug.h dht.h
+server:	server.o config.o packets.o routing.o debug.o util.o dht.o packets.h config.h routing.h debug.h dht.h
 	$(CC) $(CFLAGS) $(LDFLAGS) server.o config.o packets.o routing.o debug.o util.o dht.o -o server
 
 client: client.o packets.o config.o util.o

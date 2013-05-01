@@ -24,6 +24,16 @@ static void __attribute__ ((destructor)) destruct(void) {
 	free(pseudofiles);
 }
 
+static unsigned long
+hash(unsigned char *str) {
+	unsigned long h = 5381;
+	int c;
+	while ((c = *str++)) {
+		h = ((h << 5) + h) + c;
+	}
+	return h;
+}
+
 void add(const char* const f) {
 	struct pseudofile *tmp = malloc(sizeof(struct pseudofile));
 	tmp->next = pseudofiles;
