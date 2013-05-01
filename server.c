@@ -18,6 +18,7 @@
 #include "routing.h"
 #include "debug.h"
 #include "util.h"
+#include "dht.h"
 
 
 static node whoami;
@@ -189,7 +190,7 @@ static void* routingthread(void* data) {
 				node neighbor;
 				node *data_values;
 				
-				switch(header.magick){
+				switch(header.magick) {
 				
 				case PACKET_CREATE:
 					//Data order is <from> <to> so second num gets the dest.
@@ -286,6 +287,7 @@ static void* routingthread(void* data) {
 					
 					free(message);
 					break;
+
 				}
 				}
 			
@@ -413,6 +415,18 @@ static void* forwardingthread(void *data){
 			die("Receive from", errno);
 		}else if(err < input_header.datasize + sizeof(struct packet_header)){
 			die("short read, body", err);
+		}
+
+		if (input_header.magick == PACKET_DHT_GET ||
+		    input_header.magick == PACKET_DHT_PUT) {
+			node fwdto = dht_handle_packet(whoami, rcvbuf);
+			if (fwdto == whoami) {
+				continue;
+			}
+			else {
+				valid_packet = true;
+				out_header->dest = fwdto;
+			}
 		}
 		
 		icmp.source = whoami;
