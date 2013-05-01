@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "dht.h"
 
@@ -25,13 +26,17 @@ static void __attribute__ ((destructor)) destruct(void) {
 }
 
 static unsigned long
-hash(unsigned char *str) {
+hash(const char * str) {
 	unsigned long h = 5381;
 	int c;
 	while ((c = *str++)) {
 		h = ((h << 5) + h) + c;
 	}
 	return h;
+}
+
+node where(const char * const f) {
+	return hash(f) % MAX_HOSTS;
 }
 
 void add(const char* const f) {
