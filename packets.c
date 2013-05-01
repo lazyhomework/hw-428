@@ -14,6 +14,7 @@ void print_pack_h(struct packet_header* p){
 		switch(p->magick){
 			PACKET_TYPES
 		}
+#undef X
 	}
 	
 	printf("Type: %s, prev: %zd, source: %zd, dest: %zd, routport: %d, ttl: %zd, size: %zd\n", type,
