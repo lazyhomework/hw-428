@@ -157,6 +157,7 @@ static int send_packet_full(int sock, enum packet_type type, size_t ttl, node so
 			break;
 		}
 	}else{
+	
 iforgottochecknullbefore:	
 		free(buffer);
 		pthread_rwlock_unlock(&routing_table_lock);
@@ -215,6 +216,11 @@ int forward_packet(unsigned char *buffer, int sock, node whoami, int option){
 
 	if(routing_table[out_header->dest].distance < INFINTITY){
 		node next_hop = routing_table[out_header->dest].next_hop;
+		
+		if(routing_table[next_hop].host == NULL){
+			pthread_rwlock_unlock(&routing_table_lock);
+			return EFORWARD;
+		}
 		
 		addr.sin_family = routing_table[next_hop].host->sin_family;
 		addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
