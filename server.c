@@ -22,9 +22,13 @@
 
 
 static node whoami;
-static port this_dataport;
-static port this_routingport;
+static bool client_proxy;
 
+struct {
+	struct sockaddr_in addr;
+	port data_port;
+	port route_port;
+} client_addr;
 /*
 TODO list
 free host struct in hosts
@@ -68,10 +72,6 @@ static void setup(int argc, char* argv[]) {
 	if (required < 0x1) {
 		usage(2);
 	}
-	
-	this_dataport = hosts[whoami].dataport;
-	this_routingport = hosts[whoami].routingport;
-
 }
 
 enum thread_types {
@@ -288,19 +288,24 @@ static void* routingthread(void* data) {
 					
 					free(message);
 					break;
-
 				}
 				}
 			
 			}else{
-			//Should only get get direct messages on route port
-				/*
+			
 				printf("forwarding packet: ");
 				err = forward_packet(rcvbuf,sock,whoami,OPTION_ROUTE);
-				if(err == EFORWARD){
-					printf("Could not forward packet, cannot reach dest %zu\n", header.dest);
+				if(err < 0){
+					if(err == EFORWARD){
+						printf("Could not forward packet, cannot reach dest %zu\n", header.dest);
+					}else if(err == ETIMEOUT){
+						printf("Routing packet timed out, couldn't forward\n");
+					}else if(err == ENOSEND){
+						die("Send error: ", errno);
+					}else{
+						die("unknown forward packet error", 1);
+					}
 				}
-				*/
 			}
 		
 		}else if(header.magick == PACKET_ROUTING){
@@ -488,6 +493,8 @@ static void* forwardingthread(void *data){
 					icmp.type = ICMP_TIMEOUT;
 				}else if(err == ENOSEND){
 					die("Send error: ", errno);
+				}else{
+					die("unknown forward packet error", 1);
 				}
 			}
 		}

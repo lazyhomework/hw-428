@@ -44,10 +44,10 @@ static int client_packet(int sock, enum packet_type type, size_t datasize, void 
 	
 	header.magick = type;
 	header.dest = source;
-	header.prevhop = source;
-	header.source = source;
-	header.rout_port = hosts[source].routingport;
-	header.data_port = hosts[source].dataport;
+	header.prevhop = CLIENT_NODE;
+	header.source = CLIENT_NODE;
+	header.rout_port = route_port;
+	header.data_port = data_port;
 	header.ttl = MAX_PACKET_TTL;
 	header.datasize = datasize;
 	memcpy(buffer,&header,sizeof(struct packet_header));
@@ -111,11 +111,12 @@ static void setup(int argc, char* argv[]) {
 
 static void init_sockets(){
 	struct sockaddr_in addr;
-		
+	socklen_t len = sizeof(addr);
+	
 	data_fd = getsock(OPTION_DATA);
 	route_fd = getsock(OPTION_ROUTE);
 
-	if(getsockname(data_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0){
+	if(getsockname(data_fd, (struct sockaddr*)&addr, &len) < 0){
 		perror("getsockname");
 		die("getsockname",-1);
 	}
@@ -123,7 +124,9 @@ static void init_sockets(){
 	//leave as network;
 	data_port = addr.sin_port;
 	
-	if(getsockname(route_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0){
+	len = sizeof(addr);
+	
+	if(getsockname(route_fd, (struct sockaddr*)&addr, &len) < 0){
 		perror("getsockname");
 		die("getsockname",-1);
 	}
