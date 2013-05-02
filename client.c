@@ -28,12 +28,16 @@ node dest;
 static port route_port, data_port;
 static int route_fd, data_fd;
 
+static const char* dht_file = NULL;
+
 static enum {
 	CREATE,
 	TEARDOWN,
 	SENDDATA,
 	PING,
-	TRACE
+	TRACE,
+	DHT_GET,
+	DHT_PUT
 } mode;
 
 void usage(int err) {
@@ -92,7 +96,7 @@ static void setup(int argc, char* argv[]) {
 
 	int required = 0x0;
 
-	while (((ch = getopt(argc, argv, "s:d:ctxhpr")) != -1)) {
+	while (((ch = getopt(argc, argv, "s:d:cFftxhpr")) != -1)) {
 		switch (ch) {
 			case 's':
 				required |= 0x1;
@@ -122,6 +126,16 @@ static void setup(int argc, char* argv[]) {
 			case 'r': /*Trace route*/
 				required |= 0x4;
 				mode = TRACE;
+				break;
+			case 'f':
+				required |= 0x4;
+				mode = DHT_GET;
+				dht_file = strdup(optarg);
+				break;
+			case 'F':
+				required |= 0x4;
+				mode = DHT_PUT;
+				dht_file = strdup(optarg);
 				break;
 			case 'h':
 				usage(0);
@@ -344,6 +358,9 @@ int main(int argc, char* argv[]) {
 		//TODO better control flow
 		ping();
 		return 0;
+	case DHT_GET:
+	case DHT_PUT:
+		break;
 	case TRACE:
 		trace_route();
 		return 0;
