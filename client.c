@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -142,6 +143,13 @@ static int getsock(void) {
 	}
 	
 	return sendfd;
+}
+
+int ping(int sock){
+	struct icmp_payload data = {ICMP_PING,source,dest};
+	
+
+	return 0;
 }
 
 int main(int argc, char* argv[]) {
