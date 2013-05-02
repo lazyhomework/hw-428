@@ -41,7 +41,7 @@ static enum {
 } mode;
 
 void usage(int err) {
-	printf("./client -s nodeid -d nodeid -ctxpr\n");
+	printf("./client -s nodeid -d nodeid -fF [filename] -ctxpr\n");
 	exit (err);
 }
 
@@ -96,7 +96,7 @@ static void setup(int argc, char* argv[]) {
 
 	int required = 0x0;
 
-	while (((ch = getopt(argc, argv, "s:d:cFftxhpr")) != -1)) {
+	while (((ch = getopt(argc, argv, "s:d:cF:f:txhpr")) != -1)) {
 		switch (ch) {
 			case 's':
 				required |= 0x1;
@@ -272,7 +272,7 @@ static void trace_route(){
 	struct ping_ret pinginfo;
 	do{
 		pinginfo = ping_once(hops);
-		printf("Ping from %zu to %zu is %lld microseconds over %zu hop(s)\n", CLIENT_NODE, pinginfo.reached, pinginfo.time, hops);
+		printf("Ping from %d to %zu is %lld microseconds over %zu hop(s)\n", CLIENT_NODE, pinginfo.reached, pinginfo.time, hops);
 		hops++;
 	} while(pinginfo.reached != dest && hops <= MAX_PACKET_TTL);
 
@@ -339,9 +339,11 @@ int main(int argc, char* argv[]) {
 	int err;
 	enum packet_type type;
 	
-	node data[2];
-	data[0] = source;
-	data[1] = dest;
+	size_t datasize = (sizeof(node) * 2) + ( (dht_file) ? strlen(dht_file) + 1 : 0 );
+	char* data = malloc(datasize);
+
+	memcpy(data, &source, sizeof(source));
+	memcpy(data + sizeof(node), &dest, sizeof(dest));
 	
 	switch(mode){
 	
@@ -359,12 +361,19 @@ int main(int argc, char* argv[]) {
 		ping();
 		return 0;
 	case DHT_GET:
+		strcpy((data + sizeof(node) * 2), dht_file);
+		type = PACKET_DHT_GET;
+		break;
 	case DHT_PUT:
+		strcpy((data + sizeof(node) * 2), dht_file);
+		type = PACKET_DHT_PUT;
 		break;
 	case TRACE:
 		trace_route();
 		return 0;
 	}
+
+	printf("data = |%s|\n", data);
 	
 	err = client_packet(route_fd,type, SEND_DIRECT, 2*sizeof(node), data);
 	if(err < 0){
