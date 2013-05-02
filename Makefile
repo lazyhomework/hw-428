@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=	-Wall -Wextra -g -pedantic -pthread -Wno-padded
+CFLAGS=	-Wall -Wextra -g -pedantic -pthread -Wno-padded -std=c99
 LDFLAGS= -pthread
 
 all: server client
