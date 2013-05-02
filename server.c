@@ -421,7 +421,7 @@ static void* forwardingthread(void *data){
 		icmp.source = whoami;
 		icmp.dest = input_header.source;
 		//Default in case bad things happen.
-		icmp.type = ROUTERR;
+		icmp.type = ICMP_ROUTERR;
 
 		if (input_header.magick == PACKET_DHT_GET ||
 		    input_header.magick == PACKET_DHT_PUT) {
@@ -487,7 +487,7 @@ static void* forwardingthread(void *data){
 					valid_packet = false;
 					icmp.type = ICMP_TIMEOUT;
 				}else if(err == ENOSEND){
-					die("Send error: " errno);
+					die("Send error: ", errno);
 				}
 			}
 		}
