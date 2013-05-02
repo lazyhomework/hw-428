@@ -20,6 +20,7 @@ static void init_sockets();
 static struct addrinfo getremotehostname(char* hostname, port p);
 static void setup(int argc, char* argv[]);
 static int client_packet(int sock, enum packet_type type, enum send_type mode, size_t datasize, void *data);
+static int client_packet_full(int sock, enum packet_type type, size_t ttl, enum send_type mode, size_t datasize, void *data);
 void usage(int err);
 
 #endif

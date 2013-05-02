@@ -19,7 +19,7 @@
 #include "debug.h"
 #include "util.h"
 
-static struct ping_ret ping_once();
+static struct ping_ret ping_once(size_t ttl);
 
 node source;
 node dest;
@@ -36,11 +36,11 @@ static enum {
 } mode;
 
 void usage(int err) {
-	printf("./client -s nodeid -d nodeid -ctx\n");
+	printf("./client -s nodeid -d nodeid -ctxpr\n");
 	exit (err);
 }
 
-static int client_packet(int sock, enum packet_type type, enum send_type mode, size_t datasize, void *data){
+static int client_packet_full(int sock, enum packet_type type, size_t ttl, enum send_type mode, size_t datasize, void *data){
 	ssize_t err;
 	struct packet_header header;
 	
@@ -59,7 +59,7 @@ static int client_packet(int sock, enum packet_type type, enum send_type mode, s
 	header.magick = type;
 	header.rout_port = route_port;
 	header.data_port = data_port;
-	header.ttl = MAX_PACKET_TTL;
+	header.ttl = ttl;
 	header.datasize = datasize;
 	memcpy(buffer,&header,sizeof(struct packet_header));
 	
@@ -80,6 +80,10 @@ static int client_packet(int sock, enum packet_type type, enum send_type mode, s
 	
 	free(buffer);
 	return 0;
+
+}
+static int client_packet(int sock, enum packet_type type, enum send_type mode, size_t datasize, void *data){
+	return client_packet_full(sock,type,MAX_PACKET_TTL,mode,datasize,data);
 }
 
 static void setup(int argc, char* argv[]) {
@@ -117,6 +121,7 @@ static void setup(int argc, char* argv[]) {
 			case 'r': /*Trace route*/
 				required |= 0x4;
 				mode = TRACE;
+				break;
 			case 'h':
 				usage(0);
 				break;
@@ -145,7 +150,7 @@ static void init_sockets(){
 	//leave as network;
 	data_port = addr.sin_port;
 	
-	len = sizeof(addr);
+	len = sizeof(addr);	
 	
 	if(getsockname(route_fd, (struct sockaddr*)&addr, &len) < 0){
 		perror("getsockname");
@@ -210,14 +215,20 @@ static int getsock(int option) {
 }
 
 static void trace_route(){
+	size_t hops = 1;
 	int err = client_packet(route_fd,PACKET_CLI_CON, SEND_DIRECT, 0, 0);
 	if(err < 0){
 		die("Ping: Send to", err);
 	}
 	
-	struct ping_ret pinginfo = ping_once();
+	struct ping_ret pinginfo = ping_once(hops);
+	printf("Ping from %zu to %zu is %lldmicroseconds\n", CLIENT_NODE, source, pinginfo.time);
 	
-	printf("Ping from %zu to %zu is %lldmicroseconds\n", source, dest, pinginfo.time);
+	while(pinginfo.reached != dest && hops <= MAX_PACKET_TTL){
+		pinginfo = ping_once(hops);
+		printf("Ping from %zu to %zu is %lldmicroseconds\n", CLIENT_NODE, pinginfo.reached, pinginfo.time);
+		hops++;
+	}
 	
 	err = client_packet(route_fd,PACKET_CLI_DIS, SEND_DIRECT, 0, 0);
 	if(err < 0){
@@ -230,7 +241,7 @@ static int ping(){
 		die("Ping: Send to", err);
 	}
 	
-	struct ping_ret pinginfo = ping_once();
+	struct ping_ret pinginfo = ping_once(MAX_PACKET_TTL);
 	
 	printf("Ping from %zu to %zu is %lld microseconds\n", source, dest, pinginfo.time);
 	
@@ -246,7 +257,7 @@ static int ping(){
 returns the time diff in us from pinging dest from source
 Target server must be proxy before calling. Will block forever if not :)
 */
-static struct ping_ret ping_once(){
+static struct ping_ret ping_once(size_t ttl){
 	int err;
 	
 	char buffer[MAX_PACKET];
@@ -258,7 +269,7 @@ static struct ping_ret ping_once(){
 	
 	gettimeofday(&start, NULL);
 	
-	err = client_packet(data_fd,PACKET_ICMP, SEND_PROXY, sizeof(data), &data);
+	err = client_packet_full(data_fd,PACKET_ICMP, ttl, SEND_PROXY, sizeof(data), &data);
 	if(err < 0){
 		die("Ping: Send to", err);
 	}

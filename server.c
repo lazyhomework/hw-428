@@ -438,6 +438,17 @@ static void* forwardingthread(void *data){
 		//Default in case bad things happen.
 		icmp.type = ICMP_ROUTERR;
 
+		if(input_header.magick != PACKET_ICMP){
+			send_icmp = true;
+		}else{
+			icmp_data = (struct icmp_payload *) (rcvbuf + sizeof(struct packet_header));
+			if(icmp_data->type == ICMP_PING){
+				send_icmp = true;
+			}else{
+				send_icmp = false;
+			}
+		}
+
 		if (input_header.magick == PACKET_DHT_GET ||
 		    input_header.magick == PACKET_DHT_PUT) {
 			node fwdto = dht_handle_packet(whoami, rcvbuf);
@@ -448,15 +459,11 @@ static void* forwardingthread(void *data){
 				valid_packet = true;
 				out_header->dest = fwdto;
 			}
-		}else if(input_header.magick != PACKET_DATA && input_header.magick != PACKET_ICMP){
+		}else if(input_header.magick > PACKET_MAX){
 			//drop the packet
 			printf("Dropped packet with header type %u\n", input_header.magick);
 			icmp.type = ICMP_ROUTERR;
 			valid_packet = false;
-			send_icmp = true;
-			
-		}else if(input_header.magick != PACKET_ICMP){
-			send_icmp = true;
 		}
 		
 		
@@ -511,6 +518,8 @@ static void* forwardingthread(void *data){
 			if(err < 0){
 				if(err == EFORWARD){
 					printf("Could not forward packet, cannot reach dest %zu\n", input_header.dest);
+					valid_packet = false;
+					icmp.type = ICMP_ROUTERR;
 				}else if(err == ETIMEOUT){
 					valid_packet = false;
 					icmp.type = ICMP_TIMEOUT;
@@ -523,6 +532,20 @@ static void* forwardingthread(void *data){
 		}
 		
 		if(!valid_packet && send_icmp){
+			if(client_proxy && input_header.prevhop == CLIENT_NODE){
+				out_header->datasize = sizeof(icmp);
+				out_header->magick = PACKET_ICMP;
+				memcpy(rcvbuf+sizeof(struct packet_header), &icmp, sizeof(icmp));
+				
+				err = fwdto_client(rcvbuf, sock, whoami, client_addr, OPTION_DATA);
+				if(err < 0){
+					die("You manged to fail to send a packet back to client. GJ!",1);
+				}
+				
+				send_icmp = false;
+				valid_packet = true;
+				continue;
+			}
 			err = send_packet(sock, PACKET_ICMP, whoami, input_header.source, sizeof(icmp), &icmp, OPTION_DATA);
 			if(err == EFORWARD){
 				printf("No path known to dest %zu \n", input_header.source);
