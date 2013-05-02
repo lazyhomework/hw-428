@@ -19,11 +19,13 @@
 #include "debug.h"
 #include "util.h"
 
+static struct ping_ret ping_once();
+
 node source;
 node dest;
 
-port route_port, data_port;
-int route_fd, data_fd;
+static port route_port, data_port;
+static int route_fd, data_fd;
 
 static enum {
 	CREATE,
@@ -39,7 +41,7 @@ void usage(int err) {
 }
 
 static int client_packet(int sock, enum packet_type type, enum send_type mode, size_t datasize, void *data){
-	int err;
+	ssize_t err;
 	struct packet_header header;
 	
 	unsigned char * buffer = malloc(datasize + sizeof(struct packet_header));
@@ -154,7 +156,7 @@ static void init_sockets(){
 	route_port = addr.sin_port;
 }
 
-static struct addrinfo getremotehostname(char* hostname, short port) {
+static struct addrinfo getremotehostname(char* hostname, port p) {
         struct addrinfo hints, *res0;
         int err;
 
@@ -164,7 +166,7 @@ static struct addrinfo getremotehostname(char* hostname, short port) {
         hints.ai_flags = AI_PASSIVE | AI_CANONNAME;
 
         char portstr[5];
-        snprintf(portstr, sizeof(portstr), "%hd", port);
+        snprintf(portstr, sizeof(portstr), "%hd", p);
 
         err = getaddrinfo(hostname, portstr, &hints, &res0);
         if (err != 0) {
@@ -180,7 +182,7 @@ static struct addrinfo getremotehostname(char* hostname, short port) {
 
 static int getsock(int option) {
 	int sendfd, err;
-	short target_port;
+	port target_port;
 	
 	switch(option){
 	
@@ -192,7 +194,6 @@ static int getsock(int option) {
 			break;
 		default:
 			die("Bad option to getsock()",1);
-			break;
 	}
 	
 	struct addrinfo ai = getremotehostname(hosts[source].hostname, target_port );
@@ -208,7 +209,7 @@ static int getsock(int option) {
 	return sendfd;
 }
 
-void trace_route(){
+static void trace_route(){
 	int err = client_packet(route_fd,PACKET_CLI_CON, SEND_DIRECT, 0, 0);
 	if(err < 0){
 		die("Ping: Send to", err);
@@ -223,7 +224,7 @@ void trace_route(){
 		die("Ping: Send to", err);
 	}
 }
-int ping(){
+static int ping(){
 	int err = client_packet(route_fd,PACKET_CLI_CON, SEND_DIRECT, 0, 0);
 	if(err < 0){
 		die("Ping: Send to", err);
@@ -245,7 +246,7 @@ int ping(){
 returns the time diff in us from pinging dest from source
 Target server must be proxy before calling. Will block forever if not :)
 */
-struct ping_ret ping_once(){
+static struct ping_ret ping_once(){
 	int err;
 	
 	char buffer[MAX_PACKET];

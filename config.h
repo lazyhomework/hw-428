@@ -19,6 +19,5 @@ extern struct host hosts[MAX_HOSTS];
 extern const int TERMINATOR;
 
 void printhost(size_t n);
-void __attribute__ ((constructor)) initconfig();
 
 #endif

@@ -10,7 +10,7 @@ const int TERMINATOR=-1;
 /*
 connections must be symetric to work
 */
-void __attribute__ ((constructor)) initconfig() {
+static void __attribute__ ((constructor)) initconfig() {
 	hosts[0] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5000, .routingport=5001, .neighbors = { 1,3,TERMINATOR }});
 	hosts[1] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5010, .routingport=5011, .neighbors = { 0,2,4, TERMINATOR }});
 	hosts[2] = ((struct host){ .hostname="remote07.cs.binghamton.edu", .dataport=5020, .routingport=5021, .neighbors = { 1,3, TERMINATOR }});
