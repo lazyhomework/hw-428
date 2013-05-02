@@ -15,6 +15,8 @@
 #define OPTION_DATA 1
 
 #define EFORWARD -2
+#define ETIMEOUT -3
+#define ENOSEND -4
 
 #define INFINTITY (UINT_MAX -1)
 #define MAX_ROUTE_TTL 40		//in seconds

@@ -183,14 +183,27 @@ int send_packet(int sock, enum packet_type type, node source, node dest, size_t 
 Option is 0 to send to routing port, 1 for data.
 TODO make option an enum
 Buffer must have a packet_header at the start of it, with accurate datasize field.
+Decrements TTL field in supplied header
 By modifying the header in place, this method is faster than send_packet().
 DO NOT CALL FROM FUNCTION WITH ROUTING LOCK
+
+Returns:
+0 on succes
+ETIMEOUT if ttl in header <= 1;
+EFORWARD if dest in header unreachable
+ENOSEND if sendto fails for any reason. errno should be set to sendto failure.
 */
 int forward_packet(unsigned char *buffer, int sock, node whoami, int option){
 	struct sockaddr_in addr;
 	struct packet_header* out_header = (struct packet_header*) buffer;
 	
 	int err = 0;
+	
+	//Update ttl, drop if 0
+	if((out_header->ttl -= 1) <= 0){
+		//drop packet
+		return ETIMEOUT;
+	}
 	
 	out_header->prevhop = whoami;
 	out_header->data_port = hosts[whoami].dataport;
@@ -222,7 +235,7 @@ int forward_packet(unsigned char *buffer, int sock, node whoami, int option){
 	size_t packet_size = sizeof(struct packet_header) + out_header->datasize;
 	err = sendto(sock, buffer, packet_size, 0, (struct sockaddr *) &addr, sizeof(addr));
 	if(err < 0){
-		die("Forward packet send",errno);
+		return ENOSEND;
 	}
 	
 	return 0;

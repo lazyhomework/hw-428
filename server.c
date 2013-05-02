@@ -24,6 +24,7 @@
 static node whoami;
 static port this_dataport;
 static port this_routingport;
+
 /*
 TODO list
 free host struct in hosts
@@ -417,6 +418,11 @@ static void* forwardingthread(void *data){
 			die("short read, body", err);
 		}
 
+		icmp.source = whoami;
+		icmp.dest = input_header.source;
+		//Default in case bad things happen.
+		icmp.type = ROUTERR;
+
 		if (input_header.magick == PACKET_DHT_GET ||
 		    input_header.magick == PACKET_DHT_PUT) {
 			node fwdto = dht_handle_packet(whoami, rcvbuf);
@@ -427,12 +433,7 @@ static void* forwardingthread(void *data){
 				valid_packet = true;
 				out_header->dest = fwdto;
 			}
-		}
-		
-		icmp.source = whoami;
-		icmp.dest = input_header.source;
-
-		if(input_header.magick != PACKET_DATA && input_header.magick != PACKET_ICMP){
+		}else if(input_header.magick != PACKET_DATA && input_header.magick != PACKET_ICMP){
 			//drop the packet
 			printf("Dropped packet with header type %u\n", input_header.magick);
 			icmp.type = ICMP_ROUTERR;
@@ -464,22 +465,31 @@ static void* forwardingthread(void *data){
 					break;
 				default:
 					//do something with the rest of the packet types.
+					valid_packet = true;
+					send_icmp = false;
 					continue;
 				}
 			}else{
 				printf("Consumed packet:\n");
 				print_memblock(rcvbuf+sizeof(struct packet_header), input_header.datasize, 20);
 				send_icmp = false;
+				valid_packet = true;
 				continue;
 			}
 		}
 		
-		//Update ttl, drop if 0
-		if((out_header->ttl -= 1) <= 0){
-			//drop packet
-			printf("Dropped packet for ttl timeout.\n");
-			icmp.type = ICMP_TIMEOUT;
-			valid_packet = false;
+		if(valid_packet){
+			err = forward_packet(rcvbuf, sock, whoami, OPTION_DATA);
+			if(err < 0){
+				if(err == EFORWARD){
+					printf("Could not forward packet, cannot reach dest %zu\n", input_header.dest);
+				}else if(err == ETIMEOUT){
+					valid_packet = false;
+					icmp.type = ICMP_TIMEOUT;
+				}else if(err == ENOSEND){
+					die("Send error: " errno);
+				}
+			}
 		}
 		
 		if(!valid_packet && send_icmp){
@@ -488,11 +498,6 @@ static void* forwardingthread(void *data){
 				printf("No path known to dest %zu \n", input_header.source);
 			}else if(err < 0){
 				die("send packet",err);
-			}
-		}else if(valid_packet){
-			err = forward_packet(rcvbuf, sock, whoami, OPTION_DATA);
-			if(err == EFORWARD){
-				printf("Could not forward packet, cannot reach dest %zu\n", input_header.dest);
 			}
 		}
 		valid_packet = true;
