@@ -15,5 +15,9 @@
 	#define FORWARD_DEBUG
 #endif
 
+#ifndef CORE_DUMP_DEBUG
+	#define CORE_DUMP_DEBUG
+#endif
+
 void print_memblock(void *buf, size_t size, size_t rowwidth);
 #endif

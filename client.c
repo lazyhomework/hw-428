@@ -221,14 +221,13 @@ static void trace_route(){
 		die("Ping: Send to", err);
 	}
 	
-	struct ping_ret pinginfo = ping_once(hops);
-	printf("Ping from %zu to %zu is %lldmicroseconds\n", CLIENT_NODE, source, pinginfo.time);
-	
-	while(pinginfo.reached != dest && hops <= MAX_PACKET_TTL){
+	struct ping_ret pinginfo;
+	do{
 		pinginfo = ping_once(hops);
-		printf("Ping from %zu to %zu is %lldmicroseconds\n", CLIENT_NODE, pinginfo.reached, pinginfo.time);
+		printf("Ping from %zu to %zu is %lld microseconds over %zu hop(s)\n", CLIENT_NODE, pinginfo.reached, pinginfo.time, hops);
 		hops++;
-	}
+	} while(pinginfo.reached != dest && hops <= MAX_PACKET_TTL);
+
 	
 	err = client_packet(route_fd,PACKET_CLI_DIS, SEND_DIRECT, 0, 0);
 	if(err < 0){

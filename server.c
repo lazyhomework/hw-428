@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/resource.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -12,6 +13,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <signal.h>
+
 
 #include "config.h"
 #include "packets.h"
@@ -562,6 +564,11 @@ static void* forwardingthread(void *data){
 int main(int argc, char* argv[]) {
 	int err;
 	
+	//code copied from S.O, allows core dumps.
+	// core dumps may be disallowed by parent of this process; change that
+	struct rlimit core_limits;
+	core_limits.rlim_cur = core_limits.rlim_max = RLIM_INFINITY;
+	setrlimit(RLIMIT_CORE, &core_limits);
 
 	continue_running = true;
 	client_proxy = false;
