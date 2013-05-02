@@ -4,6 +4,7 @@
 #include <string.h>
 
 #define MAX_HOSTS 6
+#define CLIENT_NODE 99
 
 typedef unsigned short port;
 

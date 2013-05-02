@@ -22,6 +22,9 @@
 node source;
 node dest;
 
+port route_port, data_port;
+int route_fd, data_fd;
+
 static enum {
 	CREATE,
 	TEARDOWN,
@@ -106,6 +109,29 @@ static void setup(int argc, char* argv[]) {
 	}
 }
 
+static void init_sockets(){
+	struct sockaddr_in addr;
+		
+	data_fd = getsock(OPTION_DATA);
+	route_fd = getsock(OPTION_ROUTE);
+
+	if(getsockname(data_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0){
+		perror("getsockname");
+		die("getsockname",-1);
+	}
+	
+	//leave as network;
+	data_port = addr.sin_port;
+	
+	if(getsockname(route_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0){
+		perror("getsockname");
+		die("getsockname",-1);
+	}
+	
+	//leave as network;
+	route_port = addr.sin_port;
+}
+
 static struct addrinfo getremotehostname(char* hostname, short port) {
         struct addrinfo hints, *res0;
         int err;
@@ -187,8 +213,8 @@ int ping(){
 
 int main(int argc, char* argv[]) {
 	setup(argc, argv);
-
-	int fd = getsock(OPTION_ROUTE);
+	init_sockets();
+	
 	int err;
 	enum packet_type type;
 	
@@ -209,7 +235,7 @@ int main(int argc, char* argv[]) {
 		break;
 	}
 	
-	err = client_packet(fd,type, 2*sizeof(node), data);
+	err = client_packet(route_fd,type, 2*sizeof(node), data);
 	if(err < 0){
 		die("Send to", err);
 	}
