@@ -132,7 +132,9 @@ static void* timerthread(void* data){
 
 
 
-
+/*
+Does receives on routing port
+*/
 static void* routingthread(void* data) {
 	int sock = *((int*) data);
 	int err;
@@ -156,7 +158,6 @@ static void* routingthread(void* data) {
 		if (err < 0 && (errno == EINTR || errno == EAGAIN)) {
 			continue;
 		}
-
 		if(err < 0){
 			die("Receive from", errno);
 		}else if(err < sizeof(struct packet_header)){
@@ -184,6 +185,19 @@ static void* routingthread(void* data) {
 			//not needed with dist vector routing
 			die("Sould not receive hello",-1);
 		
+		}else if(header.magick == PACKET_CLI_CON){
+		
+			client_proxy = true;
+			memcpy(&client_addr.addr, &addr, sizeof(addr));
+			client_addr.data_port = header.data_port;
+			client_addr.route_port = header.rout_port;
+		
+		}else if(header.magick == PACKET_CLI_DIS){
+			client_proxy = false;
+			memset(&client_addr.addr, 0, sizeof(client_addr.addr));
+			client_addr.data_port = 0;
+			client_addr.route_port = 0;
+			
 		}else if(header.magick == PACKET_CREATE || header.magick == PACKET_TEARDOWN || header.magick == PACKET_SENDDATA){
 			
 			if(header.dest == whoami){
@@ -518,6 +532,8 @@ int main(int argc, char* argv[]) {
 	
 
 	continue_running = true;
+	client_proxy = false;
+	
 	struct sigaction act;
 	memset(&act, '\0', sizeof(act));
 

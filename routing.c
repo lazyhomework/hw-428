@@ -142,8 +142,6 @@ static int send_packet_full(int sock, enum packet_type type, size_t ttl, node so
 	
 	if(routing_table[dest].distance < INFINTITY){
 		node next_hop = routing_table[dest].next_hop;
-
-		printf("Next hop: %zu\n", next_hop);
 	
 		addr.sin_family = routing_table[next_hop].host->sin_family;
 		addr.sin_addr.s_addr = routing_table[next_hop].host->sin_addr.s_addr;
