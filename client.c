@@ -180,7 +180,7 @@ static struct addrinfo getremotehostname(char* hostname, short port) {
 
 static int getsock(int option) {
 	int sendfd, err;
-	short target_port;
+	port target_port;
 	
 	switch(option){
 	
