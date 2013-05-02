@@ -24,7 +24,7 @@
 static node whoami;
 static bool client_proxy;
 
-struct client_info client_addr;
+static struct client_info client_addr;
 /*
 TODO list
 free host struct in hosts
@@ -32,7 +32,7 @@ free host struct in hosts
 ***DONE***(see note in routing.h)Clear up host vs network on ports
 */
 
-volatile sig_atomic_t continue_running;
+static volatile sig_atomic_t continue_running;
 
 static void hdl(int sig, siginfo_t *siginfo, void* context) {
 	continue_running = 0;
