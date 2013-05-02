@@ -37,16 +37,23 @@ void usage(int err) {
 	exit (err);
 }
 
-static int client_packet(int sock, enum packet_type type, size_t datasize, void *data){
+static int client_packet(int sock, enum packet_type type, enum send_type mode, size_t datasize, void *data){
 	int err;
 	struct packet_header header;
 	
 	unsigned char * buffer = malloc(datasize + sizeof(struct packet_header));
 	
-	header.magick = type;
-	header.dest = source;
-	header.prevhop = CLIENT_NODE;
+	switch(mode){
+	case SEND_DIRECT:
+		header.dest = source;
+		break;
+	case SEND_PROXY:
+		header.dest = dest;
+		break;
+	}
 	header.source = source;
+	header.prevhop = CLIENT_NODE;
+	header.magick = type;
 	header.rout_port = route_port;
 	header.data_port = data_port;
 	header.ttl = MAX_PACKET_TTL;
@@ -77,7 +84,7 @@ static void setup(int argc, char* argv[]) {
 
 	int required = 0x0;
 
-	while (((ch = getopt(argc, argv, "s:d:ctxh")) != -1)) {
+	while (((ch = getopt(argc, argv, "s:d:ctxhp")) != -1)) {
 		switch (ch) {
 			case 's':
 				required |= 0x1;
@@ -199,16 +206,16 @@ static int getsock(int option) {
 
 int ping(){
 
-	int err = client_packet(route_fd,PACKET_CLI_CON, 0, 0);
+	int err = client_packet(route_fd,PACKET_CLI_CON, SEND_DIRECT, 0, 0);
 	if(err < 0){
 		die("Ping: Send to", err);
 	}
 	
 	long time = ping_once();
 	
-	printf("Ping from %zu to %zu is %ld", source, dest, time);
+	printf("Ping from %zu to %zu is %ld\n", source, dest, time);
 	
-	err = client_packet(route_fd,PACKET_CLI_DIS, 0, 0);
+	err = client_packet(route_fd,PACKET_CLI_DIS, SEND_DIRECT, 0, 0);
 	if(err < 0){
 		die("Ping: Send to", err);
 	}
@@ -230,7 +237,7 @@ long ping_once(){
 	
 	gettimeofday(&start, NULL);
 	
-	err = client_packet(data_fd,PACKET_ICMP, sizeof(data), &data);
+	err = client_packet(data_fd,PACKET_ICMP, SEND_PROXY, sizeof(data), &data);
 	if(err < 0){
 		die("Ping: Send to", err);
 	}
@@ -273,7 +280,7 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 	
-	err = client_packet(route_fd,type, 2*sizeof(node), data);
+	err = client_packet(route_fd,type, SEND_DIRECT, 2*sizeof(node), data);
 	if(err < 0){
 		die("Send to", err);
 	}

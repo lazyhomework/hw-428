@@ -469,11 +469,11 @@ static void* forwardingthread(void *data){
 		
 		if(input_header.dest == whoami && valid_packet){
 			if(client_proxy){
-				
 				err = fwdto_client(rcvbuf, sock, whoami, client_addr, OPTION_DATA);
 				if(err < 0){
 					die("You manged to fail to send a packet back to client. GJ!",1);
 				}
+				
 				valid_packet = true;
 				send_icmp = false;
 				continue;
@@ -505,6 +505,7 @@ static void* forwardingthread(void *data){
 			}
 		}
 		
+
 		if(valid_packet){
 			err = forward_packet(rcvbuf, sock, whoami, OPTION_DATA);
 			if(err < 0){

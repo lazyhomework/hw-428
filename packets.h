@@ -7,7 +7,7 @@
 #include "config.h"
 
 #define MAX_PACKET 548
-#define MAX_PACKET_TTL (MAX_HOSTS -1)
+#define MAX_PACKET_TTL (MAX_HOSTS)
 
 #define PACKET_TYPES \
 	X(PACKET_HELLO, "hello") \
