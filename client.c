@@ -19,6 +19,8 @@
 #include "debug.h"
 #include "util.h"
 
+static struct ping_ret ping_once();
+
 node source;
 node dest;
 
@@ -207,7 +209,7 @@ static int getsock(int option) {
 	return sendfd;
 }
 
-void trace_route(){
+static void trace_route(){
 	int err = client_packet(route_fd,PACKET_CLI_CON, SEND_DIRECT, 0, 0);
 	if(err < 0){
 		die("Ping: Send to", err);
@@ -222,7 +224,7 @@ void trace_route(){
 		die("Ping: Send to", err);
 	}
 }
-int ping(){
+static int ping(){
 	int err = client_packet(route_fd,PACKET_CLI_CON, SEND_DIRECT, 0, 0);
 	if(err < 0){
 		die("Ping: Send to", err);
@@ -244,7 +246,7 @@ int ping(){
 returns the time diff in us from pinging dest from source
 Target server must be proxy before calling. Will block forever if not :)
 */
-struct ping_ret ping_once(){
+static struct ping_ret ping_once(){
 	int err;
 	
 	char buffer[MAX_PACKET];

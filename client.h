@@ -15,9 +15,6 @@ enum send_type{
 };
 extern node source, dest;
 
-int ping();
-struct ping_ret ping_once();
-void trace_route();
 static int getsock(int);
 static void init_sockets();
 static struct addrinfo getremotehostname(char* hostname, short port);
