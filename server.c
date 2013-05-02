@@ -24,11 +24,7 @@
 static node whoami;
 static bool client_proxy;
 
-struct {
-	struct sockaddr_in addr;
-	port data_port;
-	port route_port;
-} client_addr;
+struct client_info client_addr;
 /*
 TODO list
 free host struct in hosts
@@ -472,6 +468,18 @@ static void* forwardingthread(void *data){
 		}
 		
 		if(input_header.dest == whoami && valid_packet){
+			if(client_proxy){
+				
+				err = fwdto_client(rcvbuf, sock, whoami, client_addr, OPTION_DATA);
+				if(err < 0){
+					die("You manged to fail to send a packet back to client. GJ!",1);
+				}
+				valid_packet = true;
+				send_icmp = false;
+				continue;
+			}
+			
+			
 			//consume packet
 			if(input_header.magick == PACKET_ICMP){
 				icmp_data = (struct icmp_payload *) (rcvbuf + sizeof(struct packet_header));

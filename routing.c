@@ -238,3 +238,37 @@ int forward_packet(unsigned char *buffer, int sock, node whoami, int option){
 	
 	return 0;
 }
+
+int fwdto_client(unsigned char *buffer, int sock, node whoami, struct client_info client_addr, int option){
+
+	struct sockaddr_in addr;
+	struct packet_header* out_header = (struct packet_header*) buffer;
+	
+	int err = 0;
+	
+	out_header->ttl = MAX_PACKET_TTL;
+	
+	out_header->prevhop = whoami;
+	out_header->data_port = hosts[whoami].dataport;
+	out_header->rout_port = hosts[whoami].routingport;
+	out_header->dest = CLIENT_NODE;
+		
+	addr.sin_family = client_addr.addr.sin_family;
+	addr.sin_addr.s_addr = client_addr.addr.sin_addr.s_addr;
+	switch(option){
+	case OPTION_DATA:
+		addr.sin_port = client_addr.data_port;
+		break;
+	case OPTION_ROUTE:
+		addr.sin_port = client_addr.route_port;
+		break;
+	}
+	
+	size_t packet_size = sizeof(struct packet_header) + out_header->datasize;
+	err = sendto(sock, buffer, packet_size, 0, (struct sockaddr *) &addr, sizeof(addr));
+	if(err < 0){
+		return ENOSEND;
+	}
+	
+	return 0;
+}
