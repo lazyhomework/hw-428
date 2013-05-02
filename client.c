@@ -41,7 +41,7 @@ void usage(int err) {
 }
 
 static int client_packet(int sock, enum packet_type type, enum send_type mode, size_t datasize, void *data){
-	int err;
+	ssize_t err;
 	struct packet_header header;
 	
 	unsigned char * buffer = malloc(datasize + sizeof(struct packet_header));
