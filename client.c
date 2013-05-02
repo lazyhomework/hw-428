@@ -192,7 +192,6 @@ static int getsock(int option) {
 			break;
 		default:
 			die("Bad option to getsock()",1);
-			break;
 	}
 	
 	struct addrinfo ai = getremotehostname(hosts[source].hostname, target_port );
