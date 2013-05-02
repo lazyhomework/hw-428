@@ -130,9 +130,24 @@ static struct addrinfo getremotehostname(char* hostname, short port) {
 
 //#define stringy(s) #s
 
-static int getsock(void) {
+static int getsock(int option) {
 	int sendfd, err;
-	struct addrinfo ai = getremotehostname(hosts[source].hostname, hosts[source].routingport);
+	short target_port;
+	
+	switch(option){
+	
+		case OPTION_ROUTE:	
+			target_port = hosts[source].routingport;
+			break;
+		case OPTION_DATA:
+			target_port = hosts[source].dataport;
+			break;
+		default:
+			die("Bad option to getsock()",1);
+			break;
+	}
+	
+	struct addrinfo ai = getremotehostname(hosts[source].hostname, target_port );
 	sendfd = socket(ai.ai_family, ai.ai_socktype, ai.ai_protocol);
 	if (sendfd == -1) {
 		die("socket", 1);
@@ -145,17 +160,29 @@ static int getsock(void) {
 	return sendfd;
 }
 
-int ping(int sock){
+int ping(){
+	int fd = getsock(OPTION_DATA);
 	struct icmp_payload data = {ICMP_PING,source,dest};
+	struct timeval start, end;
+	int err;
 	
+	gettimeofday(&start, NULL);
+	err = client_packet(fd,PACKET_ICMP, sizeof(data), &data);
+	if(err < 0){
+		die("Send to", err);
+	}
 
+
+
+
+	gettimeofday(&end,NULL);
 	return 0;
 }
 
 int main(int argc, char* argv[]) {
 	setup(argc, argv);
 
-	int fd = getsock();
+	int fd = getsock(OPTION_ROUTE);
 	int err;
 	enum packet_type type;
 	
