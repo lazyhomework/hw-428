@@ -137,11 +137,14 @@ static void* routingthread(void* data) {
 	int sock = *((int*) data);
 	int err;
 
+	unsigned char rcvbuf[MAX_PACKET] = { 0 };
+
 	struct sockaddr_in addr;
 	struct packet_header header;
+	struct packet_header *out_header = (struct packet_header *) rcvbuf;
 	struct route * path;
 	
-	unsigned char rcvbuf[MAX_PACKET] = { 0 };
+
 	socklen_t addrsize = sizeof(addr);
 
 	if (rcvbuf == NULL) {
@@ -189,8 +192,21 @@ static void* routingthread(void* data) {
 			memcpy(&client_addr.addr, &addr, sizeof(addr));
 			client_addr.data_port = header.data_port;
 			client_addr.route_port = header.rout_port;
+			
+			out_header->ttl = MAX_PACKET_TTL;
+			err = fwdto_client(rcvbuf, sock, whoami, client_addr, OPTION_ROUTE);
+			if(err < 0){
+				die("You manged to fail to send a packet back to client. GJ!",1);
+			}
+			
 		
 		}else if(header.magick == PACKET_CLI_DIS){
+			out_header->ttl = MAX_PACKET_TTL;
+			err = fwdto_client(rcvbuf, sock, whoami, client_addr, OPTION_ROUTE);
+			if(err < 0){
+				die("You manged to fail to send a packet back to client. GJ!",1);
+			}
+			
 			client_proxy = false;
 			memset(&client_addr.addr, 0, sizeof(client_addr.addr));
 			client_addr.data_port = 0;
