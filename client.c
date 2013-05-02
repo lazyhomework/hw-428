@@ -162,18 +162,24 @@ static int getsock(int option) {
 
 int ping(){
 	int fd = getsock(OPTION_DATA);
+	int err;
+	
+	char buffer[MAX_PACKET];
+	
 	struct icmp_payload data = {ICMP_PING,source,dest};
 	struct timeval start, end;
-	int err;
+	
 	
 	gettimeofday(&start, NULL);
 	err = client_packet(fd,PACKET_ICMP, sizeof(data), &data);
 	if(err < 0){
-		die("Send to", err);
+		die("Ping: Send to", err);
 	}
 
-
-
+	err = recv(fd, buffer, MAX_PACKET,0);
+	if(err < 0){
+		die("Ping: Receive", errno);
+	}
 
 	gettimeofday(&end,NULL);
 	return 0;
