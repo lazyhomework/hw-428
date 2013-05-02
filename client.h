@@ -3,6 +3,12 @@
 
 #include "routing.h"
 
+struct ping_ret {
+	long long time;
+	node reached;
+	enum packet_type recved_head;
+};
+
 enum send_type{
 	SEND_DIRECT,
 	SEND_PROXY
@@ -10,7 +16,8 @@ enum send_type{
 extern node source, dest;
 
 int ping();
-long ping_once();
+struct ping_ret ping_once();
+void trace_route();
 static int getsock(int);
 static void init_sockets();
 static struct addrinfo getremotehostname(char* hostname, short port);

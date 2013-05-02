@@ -29,7 +29,8 @@ static enum {
 	CREATE,
 	TEARDOWN,
 	SENDDATA,
-	PING
+	PING,
+	TRACE
 } mode;
 
 void usage(int err) {
@@ -84,7 +85,7 @@ static void setup(int argc, char* argv[]) {
 
 	int required = 0x0;
 
-	while (((ch = getopt(argc, argv, "s:d:ctxhp")) != -1)) {
+	while (((ch = getopt(argc, argv, "s:d:ctxhpr")) != -1)) {
 		switch (ch) {
 			case 's':
 				required |= 0x1;
@@ -111,6 +112,9 @@ static void setup(int argc, char* argv[]) {
 				required |= 0x4;
 				mode = PING;
 				break;
+			case 'r': /*Trace route*/
+				required |= 0x4;
+				mode = TRACE;
 			case 'h':
 				usage(0);
 				break;
@@ -204,16 +208,30 @@ static int getsock(int option) {
 	return sendfd;
 }
 
-int ping(){
-
+void trace_route(){
 	int err = client_packet(route_fd,PACKET_CLI_CON, SEND_DIRECT, 0, 0);
 	if(err < 0){
 		die("Ping: Send to", err);
 	}
 	
-	long time = ping_once();
+	struct ping_ret pinginfo = ping_once();
 	
-	printf("Ping from %zu to %zu is %ld\n", source, dest, time);
+	printf("Ping from %zu to %zu is %lldmicroseconds\n", source, dest, pinginfo.time);
+	
+	err = client_packet(route_fd,PACKET_CLI_DIS, SEND_DIRECT, 0, 0);
+	if(err < 0){
+		die("Ping: Send to", err);
+	}
+}
+int ping(){
+	int err = client_packet(route_fd,PACKET_CLI_CON, SEND_DIRECT, 0, 0);
+	if(err < 0){
+		die("Ping: Send to", err);
+	}
+	
+	struct ping_ret pinginfo = ping_once();
+	
+	printf("Ping from %zu to %zu is %lld microseconds\n", source, dest, pinginfo.time);
 	
 	err = client_packet(route_fd,PACKET_CLI_DIS, SEND_DIRECT, 0, 0);
 	if(err < 0){
@@ -224,16 +242,18 @@ int ping(){
 }
 
 /*
-returns the time diff in ms from pinging dest from source
+returns the time diff in us from pinging dest from source
 Target server must be proxy before calling. Will block forever if not :)
 */
-long ping_once(){
+struct ping_ret ping_once(){
 	int err;
 	
 	char buffer[MAX_PACKET];
 	
 	struct icmp_payload data = {ICMP_PING,source,dest};
 	struct timeval start, end;
+	struct ping_ret retval;
+	struct packet_header *header = (struct packet_header*) buffer;
 	
 	gettimeofday(&start, NULL);
 	
@@ -249,7 +269,10 @@ long ping_once(){
 
 	gettimeofday(&end,NULL);
 	
-	return ((end.tv_sec - start.tv_sec)/1000) + 1000*(end.tv_usec - start.tv_usec);
+	retval.time = ((end.tv_sec - start.tv_sec)/1000000) + (end.tv_usec - start.tv_usec);
+	retval.reached = header->source;
+	retval.recved_head = header->magick;
+	return retval;
 }
 
 int main(int argc, char* argv[]) {
@@ -277,6 +300,9 @@ int main(int argc, char* argv[]) {
 	case PING:
 		//TODO better control flow
 		ping();
+		return 0;
+	case TRACE:
+		trace_route();
 		return 0;
 	}
 	
