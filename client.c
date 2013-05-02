@@ -28,7 +28,8 @@ int route_fd, data_fd;
 static enum {
 	CREATE,
 	TEARDOWN,
-	SENDDATA
+	SENDDATA,
+	PING
 } mode;
 
 void usage(int err) {
@@ -51,7 +52,10 @@ static int client_packet(int sock, enum packet_type type, size_t datasize, void 
 	header.ttl = MAX_PACKET_TTL;
 	header.datasize = datasize;
 	memcpy(buffer,&header,sizeof(struct packet_header));
-	memcpy(buffer + sizeof(struct packet_header),data, datasize);
+	
+	if(datasize > 0){
+		memcpy(buffer + sizeof(struct packet_header),data, datasize);
+	}
 	
 	print_pack_h(&header);
 	
@@ -95,6 +99,10 @@ static void setup(int argc, char* argv[]) {
 			case 'x': /* send data */
 				required |= 0x4;
 				mode = SENDDATA;
+				break;
+			case 'p': /* ping */
+				required |= 0x4;
+				mode = PING;
 				break;
 			case 'h':
 				usage(0);
@@ -190,7 +198,29 @@ static int getsock(int option) {
 }
 
 int ping(){
-	int fd = getsock(OPTION_DATA);
+
+	int err = client_packet(route_fd,PACKET_CLI_CON, 0, 0);
+	if(err < 0){
+		die("Ping: Send to", err);
+	}
+	
+	long time = ping_once();
+	
+	printf("Ping from %zu to %zu is %ld", source, dest, time);
+	
+	err = client_packet(route_fd,PACKET_CLI_DIS, 0, 0);
+	if(err < 0){
+		die("Ping: Send to", err);
+	}
+	
+	return 0;
+}
+
+/*
+returns the time diff in ms from pinging dest from source
+Target server must be proxy before calling. Will block forever if not :)
+*/
+long ping_once(){
 	int err;
 	
 	char buffer[MAX_PACKET];
@@ -198,20 +228,21 @@ int ping(){
 	struct icmp_payload data = {ICMP_PING,source,dest};
 	struct timeval start, end;
 	
-	
 	gettimeofday(&start, NULL);
-	err = client_packet(fd,PACKET_ICMP, sizeof(data), &data);
+	
+	err = client_packet(data_fd,PACKET_ICMP, sizeof(data), &data);
 	if(err < 0){
 		die("Ping: Send to", err);
 	}
 
-	err = recv(fd, buffer, MAX_PACKET,0);
+	err = recv(data_fd, buffer, MAX_PACKET,0);
 	if(err < 0){
 		die("Ping: Receive", errno);
 	}
 
 	gettimeofday(&end,NULL);
-	return 0;
+	
+	return ((end.tv_sec - start.tv_sec)/1000) + 1000*(end.tv_usec - start.tv_usec);
 }
 
 int main(int argc, char* argv[]) {
@@ -236,6 +267,10 @@ int main(int argc, char* argv[]) {
 	case SENDDATA:
 		type = PACKET_SENDDATA;
 		break;
+	case PING:
+		//TODO better control flow
+		ping();
+		return 0;
 	}
 	
 	err = client_packet(route_fd,type, 2*sizeof(node), data);

@@ -6,6 +6,7 @@
 extern node source, dest;
 
 int ping();
+long ping_once();
 static int getsock(int);
 static void init_sockets();
 static struct addrinfo getremotehostname(char* hostname, short port);
