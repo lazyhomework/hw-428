@@ -22,8 +22,8 @@
 node source;
 node dest;
 
-port route_port, data_port;
-int route_fd, data_fd;
+static port route_port, data_port;
+static int route_fd, data_fd;
 
 static enum {
 	CREATE,
