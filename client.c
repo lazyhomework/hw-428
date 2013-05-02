@@ -156,7 +156,7 @@ static void init_sockets(){
 	route_port = addr.sin_port;
 }
 
-static struct addrinfo getremotehostname(char* hostname, short port) {
+static struct addrinfo getremotehostname(char* hostname, port p) {
         struct addrinfo hints, *res0;
         int err;
 
@@ -166,7 +166,7 @@ static struct addrinfo getremotehostname(char* hostname, short port) {
         hints.ai_flags = AI_PASSIVE | AI_CANONNAME;
 
         char portstr[5];
-        snprintf(portstr, sizeof(portstr), "%hd", port);
+        snprintf(portstr, sizeof(portstr), "%hd", p);
 
         err = getaddrinfo(hostname, portstr, &hints, &res0);
         if (err != 0) {
