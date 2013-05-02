@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <signal.h>
+#include <poll.h>
 
 #include "client.h"
 #include "config.h"
@@ -214,13 +215,46 @@ static int getsock(int option) {
 	return sendfd;
 }
 
-static void trace_route(){
-	size_t hops = 1;
-	int err = client_packet(route_fd,PACKET_CLI_CON, SEND_DIRECT, 0, 0);
+static int connect_server(enum packet_type type){
+	int err;
+	unsigned char buffer[MAX_PACKET];
+	
+	struct packet_header *head = (struct packet_header *) buffer;
+	
+	struct pollfd fd = {route_fd,POLLIN,0};
+	//struct timespec time = {2, 0};
+	
+	err = client_packet(route_fd,type, SEND_DIRECT, 0, 0);
 	if(err < 0){
-		die("Ping: Send to", err);
+		die("connect: Send to", err);
 	}
 	
+	err = poll(&fd, 1, 2*1000);
+	if(err == 0){
+		die("connect: server didn't respond", 0);
+	}else if(err < 0){
+		die("connect", errno);
+	}
+	
+	err = recv(route_fd, buffer, MAX_PACKET,0);
+	if(err < 0){
+		die("connect: Receive", errno);
+	}
+	
+	if(head->magick == type){
+		return 0;
+	}else{
+		return -1;
+	}
+
+}
+
+static void trace_route(){
+	size_t hops = 1;
+	
+	if(connect_server(PACKET_CLI_CON) < 0){
+		die("Trace route: No connection", 0);
+	}
 	struct ping_ret pinginfo;
 	do{
 		pinginfo = ping_once(hops);
@@ -228,25 +262,23 @@ static void trace_route(){
 		hops++;
 	} while(pinginfo.reached != dest && hops <= MAX_PACKET_TTL);
 
-	
-	err = client_packet(route_fd,PACKET_CLI_DIS, SEND_DIRECT, 0, 0);
-	if(err < 0){
-		die("Ping: Send to", err);
+	if(connect_server(PACKET_CLI_DIS) < 0){
+		die("Trace route: close failed", 0);
 	}
+	
 }
 static int ping(){
-	int err = client_packet(route_fd,PACKET_CLI_CON, SEND_DIRECT, 0, 0);
-	if(err < 0){
-		die("Ping: Send to", err);
+	
+	if(connect_server(PACKET_CLI_CON) < 0){
+		die("ping: No connection", 0);
 	}
 	
 	struct ping_ret pinginfo = ping_once(MAX_PACKET_TTL);
 	
 	printf("Ping from %zu to %zu is %lld microseconds\n", source, dest, pinginfo.time);
 	
-	err = client_packet(route_fd,PACKET_CLI_DIS, SEND_DIRECT, 0, 0);
-	if(err < 0){
-		die("Ping: Send to", err);
+	if(connect_server(PACKET_CLI_DIS) < 0){
+		die("Ping: Close failed", 0);
 	}
 	
 	return 0;
