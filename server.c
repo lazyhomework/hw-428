@@ -423,6 +423,9 @@ static void* forwardingthread(void *data){
 	
 	struct icmp_payload icmp;
 	struct icmp_payload *icmp_data;
+// Would this work for
+http://google.com too?  Would it scale?
+
 	while(continue_running){
 	
 		//non-blocking read, peeks at data
@@ -576,6 +579,9 @@ static void* forwardingthread(void *data){
 		valid_packet = true;
 		send_icmp = false;
 	}
+//obligatory:
+goto end;
+end:
 	return NULL;
 }
 
