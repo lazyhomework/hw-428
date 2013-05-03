@@ -347,6 +347,8 @@ static void dht(){
 	if(connect_server(PACKET_CLI_CON) < 0){
 		die("DHT: No connection", 0);
 	}
+
+	print_pack_h((struct packet_header*)buffer);
 	
 	switch(mode){
 	case DHT_GET:
