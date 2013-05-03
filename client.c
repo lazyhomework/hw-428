@@ -342,8 +342,10 @@ int main(int argc, char* argv[]) {
 	size_t datasize = ((dht_file) ? strlen(dht_file) + 1 : (sizeof(node) * 2) );
 	char* data = malloc(datasize);
 
-	memcpy(data, &source, sizeof(source));
-	memcpy(data + sizeof(node), &dest, sizeof(dest));
+	if(!dht_file){
+		memcpy(data, &source, sizeof(source));
+		memcpy(data + sizeof(node), &dest, sizeof(dest));
+	}
 	
 	switch(mode){
 	
