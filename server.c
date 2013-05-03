@@ -86,7 +86,7 @@ static void* timerthread(void* data){
 	int buffersize = MAX_HOSTS * sizeof(struct route);
 	int err;
 	
-	unsigned char buffer[buffersize];
+	char buffer[buffersize];
 
 	//tablecpy points to the buffer, starting immediately after the packet header.
 	struct route* tablecpy = (struct route *)buffer;
@@ -137,7 +137,7 @@ static void* routingthread(void* data) {
 	int sock = *((int*) data);
 	int err;
 
-	unsigned char rcvbuf[MAX_PACKET] = { 0 };
+	char rcvbuf[MAX_PACKET] = { 0 };
 
 	struct sockaddr_in addr;
 	struct packet_header header;
@@ -416,7 +416,7 @@ static void* forwardingthread(void *data){
 	int err = 0;
 	bool valid_packet = true, send_icmp = false;
 	
-	unsigned char rcvbuf[MAX_PACKET] = { 0 };
+	char rcvbuf[MAX_PACKET] = { 0 };
 
 	struct packet_header input_header;
 	struct packet_header *out_header = (struct packet_header *) rcvbuf;

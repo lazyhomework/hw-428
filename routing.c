@@ -196,7 +196,7 @@ ETIMEOUT if ttl in header <= 1;
 EFORWARD if dest in header unreachable
 ENOSEND if sendto fails for any reason. errno should be set to sendto failure.
 */
-int forward_packet(unsigned char *buffer, int sock, node whoami, int option){
+int forward_packet(char *buffer, int sock, node whoami, int option){
 	struct sockaddr_in addr;
 	struct packet_header* out_header = (struct packet_header*) buffer;
 	
@@ -249,7 +249,7 @@ int forward_packet(unsigned char *buffer, int sock, node whoami, int option){
 	return 0;
 }
 
-int fwdto_client(unsigned char *buffer, int sock, node whoami, struct client_info client_addr, int option){
+int fwdto_client(char *buffer, int sock, node whoami, struct client_info client_addr, int option){
 
 	struct sockaddr_in addr;
 	struct packet_header* out_header = (struct packet_header*) buffer;

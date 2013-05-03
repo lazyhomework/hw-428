@@ -58,8 +58,8 @@ void init_routing_table(node whoami);
 int add_neighbor(node whoami, size_t neighbor);
 
 int send_packet_ttl(int sock, enum packet_type type, size_t ttl, node dest, node source, size_t datasize, void *data, int option);
-int forward_packet(unsigned char *buffer, int sock, node whoami, int option);
-int fwdto_client(unsigned char *buffer, int sock, node whoami, struct client_info client_addr, int option);
+int forward_packet(char *buffer, int sock, node whoami, int option);
+int fwdto_client(char *buffer, int sock, node whoami, struct client_info client_addr, int option);
 void remove_entry(node whoami, node neighbor);
 int send_packet(int sock, enum packet_type type, node source, node dest, size_t datasize, void *data, int option);
 #endif

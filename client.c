@@ -49,7 +49,7 @@ static int client_packet_full(int sock, enum packet_type type, size_t ttl, enum 
 	ssize_t err;
 	struct packet_header header;
 	
-	unsigned char * buffer = malloc(datasize + sizeof(struct packet_header));
+	char * buffer = malloc(datasize + sizeof(struct packet_header));
 	
 	switch(mode){
 	case SEND_DIRECT:
@@ -231,7 +231,7 @@ static int getsock(int option) {
 
 static int connect_server(enum packet_type type){
 	int err;
-	unsigned char buffer[MAX_PACKET];
+	char buffer[MAX_PACKET];
 	
 	struct packet_header *head = (struct packet_header *) buffer;
 	
