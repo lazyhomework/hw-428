@@ -474,12 +474,22 @@ http://google.com too?  Would it scale?
 			*/
 			node fwdto = dht_handle_packet(whoami, rcvbuf);
 			if (fwdto == whoami) {
-				if (get(rcvbuf)) {
-					strcpy(rcvbuf + sizeof(struct packet_header) , "found an orange\n");
+				if (input_header.magick == PACKET_DHT_GET) {
+					if (get(rcvbuf)) {
+						out_header->magick = PACKET_DHT_ACK;
+						out_header->datasize = 0;
+						//strcpy(rcvbuf + sizeof(struct packet_header) , "found an orange\n");
+					}
+					else {
+						out_header->magick = PACKET_DHT_NACK;
+						out_header->datasize = 0;
+						//strcpy(rcvbuf + sizeof(struct packet_header) , "not found\n");
+					}
 				}
 				else {
-					strcpy(rcvbuf + sizeof(struct packet_header) , "not found\n");
+					out_header->magick = PACKET_DHT_ACK;
 				}
+				out_header->dest = input_header.source;
 				//Have to setup to send back to source.
 				valid_packet = true;
 			}
