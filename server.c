@@ -466,24 +466,22 @@ http://google.com too?  Would it scale?
 			send_icmp = (icmp_data->type == ICMP_PING);
 		}
 
-		if ((input_header.magick == PACKET_DHT_GET ||
-		    input_header.magick == PACKET_DHT_PUT) &&
-		    input_header.dest == whoami) {
+		if (input_header.dest == whoami &&
+			(input_header.magick == PACKET_DHT_GET ||
+		    input_header.magick == PACKET_DHT_PUT)) {
+			
 			consume = false;
-			/*
-			Currently conflicts with a server consuming packets destined to it
-			*/
 			node fwdto = dht_handle_packet(whoami, rcvbuf);
 			if (fwdto == whoami) {
 				if (input_header.magick == PACKET_DHT_GET) {
+					//Return the file
 					if (get(rcvbuf+sizeof(struct packet_header))) {
 						out_header->magick = PACKET_DHT_ACK;
 						out_header->datasize = 0;
-						//strcpy(rcvbuf + sizeof(struct packet_header) , "found an orange\n");
+					//Reply that the file wasn't found.
 					}else {
 						out_header->magick = PACKET_DHT_NACK;
 						out_header->datasize = 0;
-						//strcpy(rcvbuf + sizeof(struct packet_header) , "not found\n");
 					}
 				}
 				else {

@@ -198,7 +198,6 @@ static struct addrinfo getremotehostname(char* hostname, port p) {
 
 }
 
-//#define stringy(s) #s
 
 static int getsock(int option) {
 	int sendfd, err;
@@ -229,15 +228,22 @@ static int getsock(int option) {
 	return sendfd;
 }
 
+/*
+Either establish the source server as a proxy for this
+client session, or break that connection, depending on
+packet type arg. Servers have 2 seconds to respond.
+*/
 static int connect_server(enum packet_type type){
 	int err;
 	char buffer[MAX_PACKET];
-	
 	struct packet_header *head = (struct packet_header *) buffer;
-	
 	struct pollfd fd = {route_fd,POLLIN,0};
-	//struct timespec time = {2, 0};
-	
+		
+	if(type != PACKET_CLI_CON || type != PACKET_CLI_DIS){
+		printf("Bad packet type arg to connect\n");
+		return -1;
+	}
+		
 	err = client_packet(route_fd,type, SEND_DIRECT, 0, 0);
 	if(err < 0){
 		die("connect: Send to", err);
@@ -345,7 +351,7 @@ static void dht(){
 	}
 	
 	if(connect_server(PACKET_CLI_CON) < 0){
-		die("DHT: No connection", 0);
+		die("DHT: connection failed", 1);
 	}
 
 	
@@ -408,7 +414,7 @@ static void dht(){
 	}
 
 	if(connect_server(PACKET_CLI_DIS) < 0){
-		die("DHT: Close failed", 0);
+		die("DHT: Close failed", 1);
 	}
 
 }
@@ -420,13 +426,12 @@ int main(int argc, char* argv[]) {
 	int err;
 	enum packet_type type;
 	
-	size_t datasize = ((dht_file) ? strlen(dht_file) + 1 : (sizeof(node) * 2) );
+	size_t datasize = sizeof(node) * 2;
 	char* data = malloc(datasize);
 
-	if(!dht_file){
-		memcpy(data, &source, sizeof(source));
-		memcpy(data + sizeof(node), &dest, sizeof(dest));
-	}
+	memcpy(data, &source, sizeof(source));
+	memcpy(data + sizeof(node), &dest, sizeof(dest));
+	
 	
 	switch(mode){
 	
