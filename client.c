@@ -333,7 +333,15 @@ static struct ping_ret ping_once(size_t ttl){
 }
 
 static int dht(){
+	int err;
+	size_t datasize;
+	char buffer[MAX_PACKET];
+	
 	enum packet_type type;
+	
+	if(!dht_file){
+		die("DHT: no file", 1);
+	}
 	
 	if(connect_server(PACKET_CLI_CON) < 0){
 		die("DHT: No connection", 0);
@@ -342,11 +350,45 @@ static int dht(){
 	switch(mode){
 	case DHT_GET:
 		type = PACKET_DHT_GET;
-
+		strcpy(buffer, dht_file);
+		datasize = strlen(dht_file) + 1;	
+		
+		err = client_packet(data_fd,type, SEND_DIRECT, datasize, buffer);
+		if(err < 0){
+			die("Send to", err);
+		}
+		
+		err = recv(data_fd, buffer, MAX_PACKET,0);
+		if(err < 0){
+			die("Ping: Receive", errno);
+		}
+		
+		/*Verify that we got the correct response here*/
+			
 		break;
 	case DHT_PUT:
 		type = PACKET_DHT_PUT;
-	
+		/*
+		set up file to send here?
+		*/
+		strcpy(buffer, dht_file);
+		datasize = strlen(dht_file) + 1;
+
+
+		err = client_packet(data_fd,type, SEND_DIRECT, datasize, buffer);
+		if(err < 0){
+			die("Send to", err);
+		}
+		
+		err = recv(data_fd, buffer, MAX_PACKET,0);
+		if(err < 0){
+			die("Ping: Receive", errno);
+		}
+		
+		
+		/*
+		Verify correct info received here
+		*/
 		break;
 	}
 
