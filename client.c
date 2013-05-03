@@ -339,7 +339,7 @@ int main(int argc, char* argv[]) {
 	int err;
 	enum packet_type type;
 	
-	size_t datasize = (sizeof(node) * 2) + ( (dht_file) ? strlen(dht_file) + 1 : 0 );
+	size_t datasize = ((dht_file) ? strlen(dht_file) + 1 : (sizeof(node) * 2) );
 	char* data = malloc(datasize);
 
 	memcpy(data, &source, sizeof(source));
@@ -361,11 +361,11 @@ int main(int argc, char* argv[]) {
 		ping();
 		return 0;
 	case DHT_GET:
-		strcpy((data + sizeof(node) * 2), dht_file);
+		strcpy(data, dht_file);
 		type = PACKET_DHT_GET;
 		break;
 	case DHT_PUT:
-		strcpy((data + sizeof(node) * 2), dht_file);
+		strcpy(data, dht_file);
 		type = PACKET_DHT_PUT;
 		break;
 	case TRACE:
@@ -375,7 +375,7 @@ int main(int argc, char* argv[]) {
 
 	printf("data = |%s|\n", data);
 	
-	err = client_packet(route_fd,type, SEND_DIRECT, 2*sizeof(node), data);
+	err = client_packet(route_fd,type, SEND_DIRECT, datasize, data);
 	if(err < 0){
 		die("Send to", err);
 	}
