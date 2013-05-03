@@ -471,7 +471,12 @@ static void* forwardingthread(void *data){
 		    input_header.magick == PACKET_DHT_PUT) {
 			node fwdto = dht_handle_packet(whoami, rcvbuf);
 			if (fwdto == whoami) {
-				continue;
+				if (get(rcvbuf)) {
+					// reply that I have it
+				}
+				else {
+					// I don't
+				}
 			}
 			else {
 				valid_packet = true;

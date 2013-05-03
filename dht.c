@@ -95,13 +95,5 @@ node dht_handle_packet(const node whoami, char* buf) {
 	char* filename = (buf + sizeof(struct packet_header));
 	// this is aecure - clients never lie
 	node n = next(filename, whoami);
-	if (n == whoami) {
-		if (get(filename)) {
-			//respond_to_client_true
-		}
-		else {
-			//respond_to_cient_no_file
-		}
-	}
 	return n;
 }
