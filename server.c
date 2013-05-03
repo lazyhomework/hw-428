@@ -460,11 +460,7 @@ static void* forwardingthread(void *data){
 			send_icmp = true;
 		}else{
 			icmp_data = (struct icmp_payload *) (rcvbuf + sizeof(struct packet_header));
-			if(icmp_data->type == ICMP_PING){
-				send_icmp = true;
-			}else{
-				send_icmp = false;
-			}
+			send_icmp = (icmp_data->type == ICMP_PING);
 		}
 
 		if (input_header.magick == PACKET_DHT_GET ||
