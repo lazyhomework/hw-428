@@ -468,6 +468,10 @@ http://google.com too?  Would it scale?
 
 		if (input_header.magick == PACKET_DHT_GET ||
 		    input_header.magick == PACKET_DHT_PUT) {
+			
+			/*
+			Currently conflicts with a server consuming packets destined to it
+			*/
 			node fwdto = dht_handle_packet(whoami, rcvbuf);
 			if (fwdto == whoami) {
 				if (get(rcvbuf)) {

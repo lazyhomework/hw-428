@@ -332,7 +332,7 @@ static struct ping_ret ping_once(size_t ttl){
 	return retval;
 }
 
-static int dht(){
+static void dht(){
 	int err;
 	size_t datasize;
 	char buffer[MAX_PACKET];
@@ -355,12 +355,12 @@ static int dht(){
 		
 		err = client_packet(data_fd,type, SEND_DIRECT, datasize, buffer);
 		if(err < 0){
-			die("Send to", err);
+			die("DHT: Send to", err);
 		}
 		
 		err = recv(data_fd, buffer, MAX_PACKET,0);
 		if(err < 0){
-			die("Ping: Receive", errno);
+			die("DHT: Receive", errno);
 		}
 		
 		/*Verify that we got the correct response here*/
@@ -377,18 +377,21 @@ static int dht(){
 
 		err = client_packet(data_fd,type, SEND_DIRECT, datasize, buffer);
 		if(err < 0){
-			die("Send to", err);
+			die("DHT: Send to", err);
 		}
 		
 		err = recv(data_fd, buffer, MAX_PACKET,0);
 		if(err < 0){
-			die("Ping: Receive", errno);
+			die("DHT: Receive", errno);
 		}
 		
 		
 		/*
 		Verify correct info received here
 		*/
+		break;
+	default:
+		die("should never reach here", 1);
 		break;
 	}
 
@@ -430,10 +433,6 @@ int main(int argc, char* argv[]) {
 		return 0;
 	case DHT_GET:
 	case DHT_PUT:
-		/*
-		strcpy(data, dht_file);
-		type = PACKET_DHT_PUT;
-		*/
 		dht();
 		return 0;
 	case TRACE:
