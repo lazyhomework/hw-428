@@ -476,6 +476,7 @@ http://google.com too?  Would it scale?
 				else {
 					strcpy(rcvbuf + sizeof(struct packet_header) , "not found\n");
 				}
+				//Have to setup to send back to source.
 				valid_packet = true;
 			}
 			else {

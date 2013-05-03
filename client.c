@@ -332,6 +332,30 @@ static struct ping_ret ping_once(size_t ttl){
 	return retval;
 }
 
+static int dht(){
+	enum packet_type type;
+	
+	if(connect_server(PACKET_CLI_CON) < 0){
+		die("DHT: No connection", 0);
+	}
+	
+	switch(mode){
+	case DHT_GET:
+		type = PACKET_DHT_GET;
+
+		break;
+	case DHT_PUT:
+		type = PACKET_DHT_PUT;
+	
+		break;
+	}
+
+	if(connect_server(PACKET_CLI_DIS) < 0){
+		die("DHT: Close failed", 0);
+	}
+
+}
+
 int main(int argc, char* argv[]) {
 	setup(argc, argv);
 	init_sockets();
@@ -363,13 +387,13 @@ int main(int argc, char* argv[]) {
 		ping();
 		return 0;
 	case DHT_GET:
-		strcpy(data, dht_file);
-		type = PACKET_DHT_GET;
-		break;
 	case DHT_PUT:
+		/*
 		strcpy(data, dht_file);
 		type = PACKET_DHT_PUT;
-		break;
+		*/
+		dht();
+		return 0;
 	case TRACE:
 		trace_route();
 		return 0;
