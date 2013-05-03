@@ -468,11 +468,12 @@ static void* forwardingthread(void *data){
 			node fwdto = dht_handle_packet(whoami, rcvbuf);
 			if (fwdto == whoami) {
 				if (get(rcvbuf)) {
-					// reply that I have it
+					strcpy(rcvbuf + sizeof(struct packet_header) , "found an orange\n");
 				}
 				else {
-					// I don't
+					strcpy(rcvbuf + sizeof(struct packet_header) , "not found\n");
 				}
+				valid_packet = true;
 			}
 			else {
 				valid_packet = true;
