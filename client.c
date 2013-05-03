@@ -338,6 +338,7 @@ static void dht(){
 	char buffer[MAX_PACKET];
 	
 	enum packet_type type;
+	struct packet_header *header;
 	
 	if(!dht_file){
 		die("DHT: no file", 1);
@@ -364,7 +365,16 @@ static void dht(){
 		}
 		
 		/*Verify that we got the correct response here*/
-			
+		header = (struct packet_header*) buffer;
+		if (header->magick == PACKET_DHT_ACK) {
+			printf("Found the file\n");
+		}
+		else if (header->magick == PACKET_DHT_NACK) {
+			printf("Failed to found the file\n");
+		}
+		else {
+			die("wrong packet type", 0);
+		}
 		break;
 	case DHT_PUT:
 		type = PACKET_DHT_PUT;
@@ -385,10 +395,11 @@ static void dht(){
 			die("DHT: Receive", errno);
 		}
 		
-		
-		/*
-		Verify correct info received here
-		*/
+		/*Verify that we got the correct response here*/
+		header = (struct packet_header*) buffer;
+		if (header->magick == PACKET_DHT_ACK || header->magick == PACKET_DHT_NACK) {
+			printf("got a reply fromt the server\n");
+		}
 		break;
 	default:
 		die("should never reach here", 1);

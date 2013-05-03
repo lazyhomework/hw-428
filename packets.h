@@ -19,6 +19,8 @@
 	X(PACKET_ICMP, "ICMP") \
 	X(PACKET_DHT_GET, "dhtget") \
 	X(PACKET_DHT_PUT, "dhtput") \
+	X(PACKET_DHT_ACK, "dhtack") \
+	X(PACKET_DHT_NACK, "dhtnack") \
 	X(PACKET_CLI_CON, "client connect") \
 	X(PACKET_CLI_DIS, "client disconect") \
 	X(PACKET_MAX, "max")
