@@ -414,7 +414,7 @@ Buffer is limited by underlying socket
 static void* forwardingthread(void *data){
 	int sock = *((int*)data);
 	int err = 0;
-	bool valid_packet = true, send_icmp = false;
+	bool valid_packet = true, send_icmp = false, consume = true;
 	
 	char rcvbuf[MAX_PACKET] = { 0 };
 
@@ -466,21 +466,21 @@ http://google.com too?  Would it scale?
 			send_icmp = (icmp_data->type == ICMP_PING);
 		}
 
-		if (input_header.magick == PACKET_DHT_GET ||
-		    input_header.magick == PACKET_DHT_PUT) {
-			
+		if ((input_header.magick == PACKET_DHT_GET ||
+		    input_header.magick == PACKET_DHT_PUT) &&
+		    input_header.dest == whoami) {
+			consume = false;
 			/*
 			Currently conflicts with a server consuming packets destined to it
 			*/
 			node fwdto = dht_handle_packet(whoami, rcvbuf);
 			if (fwdto == whoami) {
 				if (input_header.magick == PACKET_DHT_GET) {
-					if (get(rcvbuf)) {
+					if (get(rcvbuf+sizeof(struct packet_header))) {
 						out_header->magick = PACKET_DHT_ACK;
 						out_header->datasize = 0;
 						//strcpy(rcvbuf + sizeof(struct packet_header) , "found an orange\n");
-					}
-					else {
+					}else {
 						out_header->magick = PACKET_DHT_NACK;
 						out_header->datasize = 0;
 						//strcpy(rcvbuf + sizeof(struct packet_header) , "not found\n");
@@ -488,6 +488,7 @@ http://google.com too?  Would it scale?
 				}
 				else {
 					out_header->magick = PACKET_DHT_ACK;
+					add(rcvbuf+sizeof(struct packet_header));
 				}
 				out_header->dest = input_header.source;
 				//Have to setup to send back to source.
@@ -496,6 +497,7 @@ http://google.com too?  Would it scale?
 			else {
 				valid_packet = true;
 				out_header->dest = fwdto;
+				out_header->ttl = MAX_PACKET_TTL;
 			}
 		}else if(input_header.magick > PACKET_MAX){
 			//drop the packet
@@ -512,7 +514,7 @@ http://google.com too?  Would it scale?
 			valid_packet = false;
 		}
 		
-		if(input_header.dest == whoami && valid_packet){
+		if(input_header.dest == whoami && valid_packet && consume){
 			if(client_proxy){
 				err = fwdto_client(rcvbuf, sock, whoami, client_addr, OPTION_DATA);
 				if(err < 0){
@@ -582,6 +584,7 @@ http://google.com too?  Would it scale?
 				
 				send_icmp = false;
 				valid_packet = true;
+				consume = true;
 				continue;
 			}
 			err = send_packet(sock, PACKET_ICMP, whoami, input_header.source, sizeof(icmp), &icmp, OPTION_DATA);
@@ -593,6 +596,7 @@ http://google.com too?  Would it scale?
 		}
 		valid_packet = true;
 		send_icmp = false;
+		consume = true;
 	}
 //obligatory:
 goto end;

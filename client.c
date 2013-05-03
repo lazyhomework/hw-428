@@ -338,7 +338,7 @@ static void dht(){
 	char buffer[MAX_PACKET];
 	
 	enum packet_type type;
-	struct packet_header *header;
+	struct packet_header *header = (struct packet_header*) buffer;
 	
 	if(!dht_file){
 		die("DHT: no file", 1);
@@ -348,7 +348,6 @@ static void dht(){
 		die("DHT: No connection", 0);
 	}
 
-	print_pack_h((struct packet_header*)buffer);
 	
 	switch(mode){
 	case DHT_GET:
@@ -366,8 +365,8 @@ static void dht(){
 			die("DHT: Receive", errno);
 		}
 		
+		print_pack_h(header);
 		/*Verify that we got the correct response here*/
-		header = (struct packet_header*) buffer;
 		if (header->magick == PACKET_DHT_ACK) {
 			printf("Found the file\n");
 		}
