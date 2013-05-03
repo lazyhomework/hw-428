@@ -62,6 +62,9 @@ node next(const char * const f, const node whoami) {
 
 void add(const char* const f) {
 	struct pseudofile *tmp = malloc(sizeof(struct pseudofile));
+	if (get(f)) {
+		return;
+	}
 	tmp->next = pseudofiles;
 	tmp->filename = strdup(f);
 	pseudofiles = tmp;
