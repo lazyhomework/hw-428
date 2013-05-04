@@ -400,9 +400,6 @@ static void* routingthread(void* data) {
 		}else{
 			die("Malformed headerid",-1);
 		}
-
-
-
 	}	
 	return NULL;
 }

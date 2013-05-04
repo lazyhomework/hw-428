@@ -27,6 +27,7 @@ node dest;
 
 static port route_port, data_port;
 static int route_fd, data_fd;
+static int cli_packet_debug = false;
 
 static const char* dht_file = NULL;
 
@@ -41,7 +42,13 @@ static enum {
 } mode;
 
 void usage(int err) {
-	printf("./client -s nodeid -d nodeid -fF [filename] -ctxpr\n");
+	printf("./client -s nodeid -d nodeid -fF [filename] -ctxpr -v -h\n");
+	if(err == 0){
+		printf(	"-s: Source, -d: Dest, -f: get filename, -F: put filename\n"
+				"-c: Create Link, -t: teardown link, -x: send data\n"
+				"-p: ping, -r: trace route -v: verbose mode, -h: help\n");
+	}
+			
 	exit (err);
 }
 
@@ -97,7 +104,7 @@ static void setup(int argc, char* argv[]) {
 
 	int required = 0x0;
 
-	while (((ch = getopt(argc, argv, "s:d:cF:f:txhpr")) != -1)) {
+	while (((ch = getopt(argc, argv, "s:d:cF:f:v:txhpr")) != -1)) {
 		switch (ch) {
 			case 's':
 				required |= 0x1;
@@ -140,6 +147,9 @@ static void setup(int argc, char* argv[]) {
 				break;
 			case 'h':
 				usage(0);
+				break;
+			case 'v':
+				cli_packet_debug = true;
 				break;
 			case '?':
 			default:
@@ -240,7 +250,7 @@ static int connect_server(enum packet_type type){
 	struct packet_header *head = (struct packet_header *) buffer;
 	struct pollfd fd = {route_fd,POLLIN,0};
 		
-	if(type != PACKET_CLI_CON || type != PACKET_CLI_DIS){
+	if(type != PACKET_CLI_CON && type != PACKET_CLI_DIS){
 		printf("Bad packet type arg to connect\n");
 		return -1;
 	}
@@ -457,8 +467,6 @@ int main(int argc, char* argv[]) {
 		trace_route();
 		return 0;
 	}
-
-	printf("data = |%s|\n", data);
 	
 	err = client_packet(route_fd,type, SEND_DIRECT, datasize, data);
 	if(err < 0){
