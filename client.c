@@ -27,7 +27,7 @@ node dest;
 
 static port route_port, data_port;
 static int route_fd, data_fd;
-static int cli_packet_debug = false;
+static int verbose = false;
 
 static const char* dht_file = NULL;
 
@@ -52,59 +52,12 @@ void usage(int err) {
 	exit (err);
 }
 
-static int client_packet_full(int sock, enum packet_type type, size_t ttl, enum send_type mode, size_t datasize, void *data){
-	ssize_t err;
-	struct packet_header header;
-	
-	char * buffer = malloc(datasize + sizeof(struct packet_header));
-	
-	switch(mode){
-	case SEND_DIRECT:
-		header.dest = source;
-		break;
-	case SEND_PROXY:
-		header.dest = dest;
-		break;
-	}
-	header.source = source;
-	header.prevhop = CLIENT_NODE;
-	header.magick = type;
-	header.rout_port = route_port;
-	header.data_port = data_port;
-	header.ttl = ttl;
-	header.datasize = datasize;
-	memcpy(buffer,&header,sizeof(struct packet_header));
-	
-	if(datasize > 0){
-		memcpy(buffer + sizeof(struct packet_header),data, datasize);
-	}
-	
-	printf("Send: ");
-	print_pack_h(&header);
-	
-	size_t buffersize = sizeof(struct packet_header) + datasize;
-	
-	err = send(sock, buffer, buffersize, 0);
-	if(err < 0){
-		perror("send: ");
-		free(buffer);
-		return -1;
-	}
-	
-	free(buffer);
-	return 0;
-
-}
-static int client_packet(int sock, enum packet_type type, enum send_type mode, size_t datasize, void *data){
-	return client_packet_full(sock,type,MAX_PACKET_TTL,mode,datasize,data);
-}
-
 static void setup(int argc, char* argv[]) {
 	char ch;
 
 	int required = 0x0;
 
-	while (((ch = getopt(argc, argv, "s:d:cF:f:v:txhpr")) != -1)) {
+	while (((ch = getopt(argc, argv, "s:d:cF:f:txhprv")) != -1)) {
 		switch (ch) {
 			case 's':
 				required |= 0x1;
@@ -149,7 +102,7 @@ static void setup(int argc, char* argv[]) {
 				usage(0);
 				break;
 			case 'v':
-				cli_packet_debug = true;
+				verbose = true;
 				break;
 			case '?':
 			default:
@@ -159,6 +112,55 @@ static void setup(int argc, char* argv[]) {
 	if (required != (0x1 | 0x2 | 0x4)) {
 		usage(2);
 	}
+}
+
+static int client_packet_full(int sock, enum packet_type type, size_t ttl, enum send_type mode, size_t datasize, void *data){
+	ssize_t err;
+	struct packet_header header;
+	
+	char * buffer = malloc(datasize + sizeof(struct packet_header));
+	
+	switch(mode){
+	case SEND_DIRECT:
+		header.dest = source;
+		break;
+	case SEND_PROXY:
+		header.dest = dest;
+		break;
+	}
+	header.source = source;
+	header.prevhop = CLIENT_NODE;
+	header.magick = type;
+	header.rout_port = route_port;
+	header.data_port = data_port;
+	header.ttl = ttl;
+	header.datasize = datasize;
+	memcpy(buffer,&header,sizeof(struct packet_header));
+	
+	if(datasize > 0){
+		memcpy(buffer + sizeof(struct packet_header),data, datasize);
+	}
+	
+	if(verbose){
+		printf("Send: ");
+		print_pack_h(&header);
+	}
+	
+	size_t buffersize = sizeof(struct packet_header) + datasize;
+	
+	err = send(sock, buffer, buffersize, 0);
+	if(err < 0){
+		perror("send: ");
+		free(buffer);
+		return -1;
+	}
+	
+	free(buffer);
+	return 0;
+
+}
+static int client_packet(int sock, enum packet_type type, enum send_type mode, size_t datasize, void *data){
+	return client_packet_full(sock,type,MAX_PACKET_TTL,mode,datasize,data);
 }
 
 static void init_sockets(){

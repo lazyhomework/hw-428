@@ -21,6 +21,12 @@
 #include "util.h"
 #include "dht.h"
 
+/*
+	debug_packets = 1;
+	debug_timing = 0;
+	debug_routing = 1;
+	debug_forward = 1;
+*/
 
 static node whoami;
 static bool client_proxy;
@@ -41,6 +47,10 @@ static void hdl(int sig, siginfo_t *siginfo, void* context) {
 
 static void usage(int err) {
 	printf("./server -n nodeid\n");
+	if(err == 0){
+		printf(	"-n nodeid, -v verbose output, -r routing output\n"
+				"-t timing output, -p sent packets output, -f forwarding output\n");
+	}
 	exit (err);
 }
 
@@ -48,8 +58,7 @@ static void setup(int argc, char* argv[]) {
 	char ch;
 
 	int required = 0x0;
-
-	while (((ch = getopt(argc, argv, "hn:")) != -1)) {
+	while (((ch = getopt(argc, argv, "hn:vrtpf")) != -1)) {
 		switch (ch) {
 			case 'h':
 				usage(0);
@@ -61,6 +70,29 @@ static void setup(int argc, char* argv[]) {
 					die("Node out of range",-1);
 				}
 				break;
+			case 'v':
+				debug_packets = 1;
+				debug_timing = 1;
+				debug_routing = 1;
+				debug_forward = 1;
+				required |= 0x2;
+				break;
+			case 'r':
+				debug_routing = 1;
+				required |= 0x2;
+				break;
+			case 't':
+				debug_timing = 1;
+				required |= 0x2;
+				break;
+			case 'p':
+				debug_packets = 1;
+				required |= 0x2;
+				break;
+			case 'f':
+				debug_forward = 1;
+				required |= 0x2;
+				break;
 			case '?':
 			default:
 				usage(1);
@@ -68,6 +100,11 @@ static void setup(int argc, char* argv[]) {
 	}
 	if (required < 0x1) {
 		usage(2);
+	}else if(required < 0x2){
+		debug_packets = 1;
+		debug_timing = 0;
+		debug_routing = 1;
+		debug_forward = 1;
 	}
 }
 

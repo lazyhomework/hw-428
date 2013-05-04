@@ -30,9 +30,9 @@ void print_memblock(void *buf, size_t size, size_t rowwidth){
 }
 
 void init_debug(){
-	debug_packets = 1;
-	debug_timing = 1;
-	debug_routing = 1;
+	debug_packets = 0;
+	debug_timing = 0;
+	debug_routing = 0;
 	debug_forward = 0;
 
 	//code copied from S.O, allows core dumps.
