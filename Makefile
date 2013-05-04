@@ -24,4 +24,4 @@ debug.o: debug.h
 dht.o: dht.h
 
 clean:
-	rm -vf *.o server
+	rm -vf *.o server client
