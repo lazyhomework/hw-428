@@ -1,5 +1,10 @@
 #include "debug.h"
 
+int debug_packets;
+int debug_routing;
+int debug_timing;
+int debug_forward;
+
 /*
 Print a block of memory
 starting from buf, prints hex values in 4 byte groups with
@@ -22,4 +27,18 @@ void print_memblock(void *buf, size_t size, size_t rowwidth){
 		printf("%02x",print_buf[i]);
 	}
 	printf("\n");
+}
+
+void init_debug(){
+	debug_packets = 1;
+	debug_timing = 1;
+	debug_routing = 1;
+	debug_forward = 0;
+
+	//code copied from S.O, allows core dumps.
+	// core dumps may be disallowed by parent of this process; change that
+	struct rlimit core_limits;
+	core_limits.rlim_cur = core_limits.rlim_max = RLIM_INFINITY;
+	setrlimit(RLIMIT_CORE, &core_limits);
+
 }

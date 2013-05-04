@@ -72,6 +72,7 @@ static int client_packet_full(int sock, enum packet_type type, size_t ttl, enum 
 		memcpy(buffer + sizeof(struct packet_header),data, datasize);
 	}
 	
+	printf("Send: ");
 	print_pack_h(&header);
 	
 	size_t buffersize = sizeof(struct packet_header) + datasize;
@@ -370,7 +371,7 @@ static void dht(){
 		if(err < 0){
 			die("DHT: Receive", errno);
 		}
-		
+		printf("Recv: ");
 		print_pack_h(header);
 		/*Verify that we got the correct response here*/
 		if (header->magick == PACKET_DHT_ACK) {

@@ -112,7 +112,8 @@ void remove_entry(node whoami, node neighbor){
 
 }
 /*
-Returns -2 if can't get to dest, -1 if sendto fails, 0 otherwise
+Send the packet described by args. Data should point to the start of data to be sent.
+Returns EFORWARD if can't get to dest, -1 if sendto fails, 0 otherwise
 Do not call from function that currently has routing table lock (this function locks it)
 */
 static int send_packet_full(int sock, enum packet_type type, size_t ttl, node source, node dest, node prevhop, size_t datasize, void *data, int option){
@@ -134,10 +135,11 @@ static int send_packet_full(int sock, enum packet_type type, size_t ttl, node so
 	memcpy(buffer,&header,sizeof(struct packet_header));
 	memcpy(buffer + sizeof(struct packet_header),data, datasize);
 
-#ifdef ROUTING_DEBUG
-	printf("send: ");
-	print_pack_h(&header);
-#endif
+	if(debug_packets){
+		printf("Send: ");
+		print_pack_h(&header);
+	}
+	
 	pthread_rwlock_rdlock(&routing_table_lock);
 	
 	if(routing_table[dest].distance < INFINTITY ){
@@ -239,6 +241,11 @@ int forward_packet(char *buffer, int sock, node whoami, int option){
 	}
 	
 	pthread_rwlock_unlock(&routing_table_lock);
+	
+	if(debug_forward){
+		printf("Fwdd: ");
+		print_pack_h(out_header);
+	}
 	
 	size_t packet_size = sizeof(struct packet_header) + out_header->datasize;
 	err = sendto(sock, buffer, packet_size, 0, (struct sockaddr *) &addr, sizeof(addr));

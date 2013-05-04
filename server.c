@@ -1,6 +1,5 @@
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/resource.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -109,11 +108,10 @@ static void* timerthread(void* data){
 
 		pthread_rwlock_unlock(&routing_table_lock);
 
-		
-#ifdef TIMING_DEBUG
-		printf("Table after update ttl \n");
-		print_rt_ptr(tablecpy);
-#endif
+		if(debug_timing){
+			printf("Table after update ttl \n");
+			print_rt_ptr(tablecpy);
+		}
 		
 		//Go through list of neighbors, send the table to them.
 		for (size_t i = 0; i < MAX_HOSTS; ++i) {			
@@ -166,11 +164,13 @@ static void* routingthread(void* data) {
 		}
 	
 		memcpy(&header, rcvbuf, sizeof(struct packet_header));
-#ifdef ROUTING_DEBUG
-		print_pack_h(&header);
-		//printf("Raw buffer\n");
-		//print_memblock(rcvbuf, sizeof(struct packet_header), 0);
-#endif	
+
+		if(debug_routing){
+			print_pack_h(&header);
+			//printf("Raw buffer\n");
+			//print_memblock(rcvbuf, sizeof(struct packet_header), 0);
+		}
+
 		
 		err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + header.datasize, MSG_DONTWAIT, (struct sockaddr *) &addr, &addrsize);
 		if (err < 0 && (errno == EINTR || errno == EAGAIN)) {
@@ -249,9 +249,9 @@ static void* routingthread(void* data) {
 						die("send packet",err);
 					}
 					
-#ifdef ROUTING_DEBUG
-					printf("Neighbor: %zu, whoami %zu\n",data_values[0], data_values[1]);
-#endif					
+					if(debug_routing){
+						printf("Neighbor: %zu, whoami %zu\n",data_values[0], data_values[1]);
+					}
 					
 					//Ideally I'd send the table now, but with poor function planning its too much fixing.
 					break;
@@ -287,9 +287,9 @@ static void* routingthread(void* data) {
 						}
 					}else{
 						//No connection to tear down.
-#ifdef ROUTING_DEBUG
-						printf("No connection to break, ignoring message \n");
-#endif										
+						if(debug_routing){
+							printf("No connection to break, ignoring message \n");
+						}
 					}
 					
 					pthread_rwlock_unlock(&routing_table_lock);
@@ -321,7 +321,6 @@ static void* routingthread(void* data) {
 			
 			}else{
 			
-				printf("forwarding packet: ");
 				err = forward_packet(rcvbuf,sock,whoami,OPTION_ROUTE);
 				if(err < 0){
 					if(err == EFORWARD){
@@ -342,15 +341,16 @@ static void* routingthread(void* data) {
 			
 			path = (struct route *) (rcvbuf+sizeof(struct packet_header));
 			
-#ifdef ROUTING_DEBUG
-			//printf("Raw buffer\n");
-			//print_memblock(rcvbuf,sizeof(struct route)*MAX_HOSTS, sizeof(struct route));
+			if(debug_routing){
+				//printf("Raw buffer\n");
+				//print_memblock(rcvbuf,sizeof(struct route)*MAX_HOSTS, sizeof(struct route));
 			
-			printf("Old routing table\n");				
-			print_routing_table();
-			printf("Table reveived from %zu\n", header.prevhop);
-			print_rt_ptr(path);
-#endif
+				printf("Old routing table\n");				
+				print_routing_table();
+				printf("Table reveived from %zu\n", header.prevhop);
+				print_rt_ptr(path);
+			}
+
 			
 
 			//Update our info on how to contact sender on every routing packet
@@ -391,10 +391,11 @@ static void* routingthread(void* data) {
 				}
 			}
 
-#ifdef ROUTING_DEBUG
-			printf("new routing table updated from host #%zu\n", header.prevhop);
-			print_routing_table();
-#endif		
+			if(debug_routing){
+				printf("new routing table updated from host #%zu\n", header.prevhop);
+				print_routing_table();
+			}
+
 			pthread_rwlock_unlock(&routing_table_lock);
 		}else{
 			die("Malformed headerid",-1);
@@ -439,9 +440,10 @@ http://google.com too?  Would it scale?
 			die("short read, header", err);
 		}
 		
-		#ifdef FORWARD_DEBUG
-		print_pack_h(&input_header);
-		#endif
+		if(debug_forward){
+			printf("Recv: ");
+			print_pack_h(&input_header);
+		}
 		
 		//non-blocking read, consumes data
 		err = recvfrom(sock, rcvbuf, sizeof(struct packet_header) + input_header.datasize, MSG_DONTWAIT, NULL, 0);
@@ -604,12 +606,6 @@ end:
 
 int main(int argc, char* argv[]) {
 	int err;
-	
-	//code copied from S.O, allows core dumps.
-	// core dumps may be disallowed by parent of this process; change that
-	struct rlimit core_limits;
-	core_limits.rlim_cur = core_limits.rlim_max = RLIM_INFINITY;
-	setrlimit(RLIMIT_CORE, &core_limits);
 
 	continue_running = true;
 	client_proxy = false;
@@ -623,7 +619,8 @@ int main(int argc, char* argv[]) {
 	if (sigaction(SIGHUP, &act, NULL) == -1) {
 		die("sigaction", 0);
 	}
-
+	
+	init_debug();
 	setup(argc, argv);
 	printhost(whoami);
 	init_routing_table(whoami);
