@@ -291,7 +291,7 @@ static void trace_route(){
 	struct ping_ret pinginfo;
 	do{
 		pinginfo = ping_once(hops);
-		printf("Ping from %d to %zu is %lld microseconds over %zu hop(s)\n", CLIENT_NODE, pinginfo.reached, pinginfo.time, hops);
+		printf("Ping from %zu to %zu is %lld microseconds over %zu hop(s)\n", CLIENT_NODE, pinginfo.reached, pinginfo.time, hops);
 		hops++;
 	} while(pinginfo.reached != dest && hops <= MAX_PACKET_TTL);
 
